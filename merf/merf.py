@@ -50,20 +50,10 @@ class MERF(BaseEstimator, RegressorMixin):
         gll_early_stop_threshold=None,
         max_iterations=20,
     ):
-        self.gll_early_stop_threshold = gll_early_stop_threshold
-        self.max_iterations = max_iterations
-
-        self.cluster_counts = None
         # Note fixed_effects_model must already be instantiated when passed in.
         self.fixed_effects_model = fixed_effects_model
-        self.trained_fe_model = None
-        self.trained_b = None
-
-        self.b_hat_history = []
-        self.sigma2_hat_history = []
-        self.D_hat_history = []
-        self.gll_history = []
-        self.val_loss_history = []
+        self.gll_early_stop_threshold = gll_early_stop_threshold
+        self.max_iterations = max_iterations
 
     def predict(self, X: np.ndarray, Z: np.ndarray, clusters: pd.Series):
         """
@@ -131,6 +121,15 @@ class MERF(BaseEstimator, RegressorMixin):
         Returns:
             MERF: fitted model
         """
+        self.cluster_counts = None
+        self.trained_fe_model = None
+        self.trained_b = None
+
+        self.b_hat_history = []
+        self.sigma2_hat_history = []
+        self.D_hat_history = []
+        self.gll_history = []
+        self.val_loss_history = []
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Input Checks ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         if type(clusters) != pd.Series:
