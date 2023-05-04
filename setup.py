@@ -29,7 +29,7 @@ setup(
     python_requires='>=3.8',
     packages=find_packages(),
     install_requires=["pandas>=1.0", "numpy", "scikit-learn", "matplotlib>=3.0", "lightgbm"],
-    extras_require={"dev": ["black"]},
+    extras_require={"dev": ["black", "sklearn"]},
     include_package_data=True,
     zip_safe=False,
 )
