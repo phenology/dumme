@@ -16,8 +16,6 @@ logger = logging.getLogger(__name__)
 
 # BaseEstimator has boilerplate for things like get_params, set_params
 # RegressorMixin adds attribute `_estimator_type = "regressor` and `score` method
-
-
 class MERF(BaseEstimator, RegressorMixin):
     """
     This is the core class to instantiate, train, and predict using a mixed effects random forest model.
@@ -57,21 +55,32 @@ class MERF(BaseEstimator, RegressorMixin):
         self.gll_early_stop_threshold = gll_early_stop_threshold
         self.max_iterations = max_iterations
 
-    def predict(self, X: np.ndarray, Z: np.ndarray, clusters: pd.Series):
+    def predict(
+        self,
+        X: ArrayLike,
+        cluster_column: int | str = 0,
+        fixed_effects: list = [],
+        random_effects: list = [],
+    ):
         """
         Predict using trained MERF.  For known clusters the trained random effect correction is applied.
         For unknown clusters the pure fixed effect (RF) estimate is used.
 
         Args:
-            X (np.ndarray): fixed effect covariates
-            Z (np.ndarray): random effect covariates
-            clusters (pd.Series): cluster assignments for samples
+            X: predictors (both fixed and random effect covariates)
+            cluster_column: name or index of column in X that contains cluster
+                assignments. Default is first column.
+            fixed_effects: columns (names or indices) to use as fixed effects.
+                If not specified, all columns except for those designated as cluster
+                or random effects are used.
+            random_effects: columns (names or indices) to use as random effects.
+                If not specified, an array of ones with shape (n, 1) is used,
+                where n = len(X)
 
         Returns:
             np.ndarray: the predictions y_hat
         """
-        if type(clusters) != pd.Series:
-            raise TypeError("clusters must be a pandas Series.")
+        X, clusters, Z = parse_input(X, cluster_column, fixed_effects, random_effects)
 
         if not hasattr(self, "trained_fe_model_"):
             raise NotFittedError(
@@ -114,8 +123,8 @@ class MERF(BaseEstimator, RegressorMixin):
         Args:
             X: predictors (both fixed and random effect covariates)
             y: response/target variable
-            cluster_column: name or index of column in X that contains clusters.
-                Default is first column.
+            cluster_column: name or index of column in X that contains cluster
+                assignments. Default is first column.
             fixed_effects: columns (names or indices) to use as fixed effects.
                 If not specified, all columns except for those designated as cluster
                 or random effects are used.
@@ -139,26 +148,7 @@ class MERF(BaseEstimator, RegressorMixin):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Parse Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         assert len(y) == len(X)
-
-        if isinstance(X, pd.DataFrame):
-            # Convert column names to indices
-
-            if isinstance(cluster_column, str):
-                cluster_column = X.columns.get_loc(cluster_column)
-
-            if random_effects and all([isinstance(name, str) for name in random_effects]):
-                random_effects = [X.columns.get_loc(name) for name in random_effects]
-
-            if fixed_effects and all([isinstance(name, str) for name in fixed_effects]):
-                fixed_effects = [X.columns.get_loc(name) for name in fixed_effects]
-
-        if fixed_effects == []:
-            fixed_effects = [i for i in np.arange(X.shape[1]) if i not in random_effects and i != cluster_column]
-
-        # Divide array into fixed and random effects, and clusters
-        clusters = pd.Series(X[:, cluster_column])
-        Z = X[:, random_effects] if random_effects else np.ones((len(X), 1))
-        X = X[:, fixed_effects]
+        X, clusters, Z = parse_input(X, cluster_column, fixed_effects, random_effects)
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Initialization ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         n_clusters = clusters.nunique()
@@ -362,3 +352,27 @@ class MERF(BaseEstimator, RegressorMixin):
         # Step 3 - Create the multi-indexed dataframe
         b_hat_history_df = pd.DataFrame(b_array, index=mi)
         return b_hat_history_df
+
+
+def parse_input(X, cluster_column, fixed_effects, random_effects):
+    """Split input data into separate arrays for fixed and random effects, and clusters."""
+
+    if isinstance(X, pd.DataFrame):
+        # Convert column names to indices
+        if isinstance(cluster_column, str):
+            cluster_column = X.columns.get_loc(cluster_column)
+
+        if random_effects and all([isinstance(name, str) for name in random_effects]):
+            random_effects = [X.columns.get_loc(name) for name in random_effects]
+
+        if fixed_effects and all([isinstance(name, str) for name in fixed_effects]):
+            fixed_effects = [X.columns.get_loc(name) for name in fixed_effects]
+
+    if fixed_effects == []:
+        fixed_effects = [i for i in np.arange(X.shape[1]) if i not in random_effects and i != cluster_column]
+
+    # Divide array into fixed and random effects, and clusters
+    clusters = pd.Series(X[:, cluster_column])
+    Z = X[:, random_effects] if random_effects else np.ones((len(X), 1))
+    X = X[:, fixed_effects]
+    return X, clusters, Z
