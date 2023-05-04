@@ -338,9 +338,6 @@ class MERF(BaseEstimator, RegressorMixin):
                     early_stop_flag = True
         return self
 
-    def score(self, X, Z, clusters, y):
-        raise NotImplementedError()
-
     def get_bhat_history_df(self):
         """
         This function does a complicated reshape and re-indexing operation to get the
