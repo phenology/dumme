@@ -5,9 +5,11 @@ import logging
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.exceptions import NotFittedError
+
 
 logger = logging.getLogger(__name__)
 
@@ -100,23 +102,26 @@ class MERF(BaseEstimator, RegressorMixin):
 
     def fit(
         self,
-        X: np.ndarray,
-        Z: np.ndarray,
-        clusters: pd.Series,
-        y: np.ndarray,
-        X_val: np.ndarray = None,
-        Z_val: np.ndarray = None,
-        clusters_val: pd.Series = None,
-        y_val: np.ndarray = None,
+        X: ArrayLike,
+        y: ArrayLike,
+        cluster_column: int | str = 0,
+        fixed_effects: list = [],
+        random_effects: list = [],
     ):
         """
         Fit MERF using Expectation-Maximization algorithm.
 
         Args:
-            X (np.ndarray): fixed effect covariates
-            Z (np.ndarray): random effect covariates
-            clusters (pd.Series): cluster assignments for samples
-            y (np.ndarray): response/target variable
+            X: predictors (both fixed and random effect covariates)
+            y: response/target variable
+            cluster_column: name or index of column in X that contains clusters.
+                Default is first column.
+            fixed_effects: columns (names or indices) to use as fixed effects.
+                If not specified, all columns except for those designated as cluster
+                or random effects are used.
+            random_effects: columns (names or indices) to use as random effects.
+                If not specified, an array of ones with shape (n, 1) is used,
+                where n = len(X)
 
         Returns:
             MERF: fitted model
@@ -131,22 +136,29 @@ class MERF(BaseEstimator, RegressorMixin):
         self.gll_history_ = []
         self.val_loss_history_ = []
 
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Input Checks ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        if type(clusters) != pd.Series:
-            raise TypeError("clusters must be a pandas Series.")
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Parse Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        assert len(Z) == len(X)
         assert len(y) == len(X)
-        assert len(clusters) == len(X)
 
-        if X_val is None:
-            assert Z_val is None
-            assert clusters_val is None
-            assert y_val is None
-        else:
-            assert len(Z_val) == len(X_val)
-            assert len(clusters_val) == len(X_val)
-            assert len(y_val) == len(X_val)
+        if isinstance(X, pd.DataFrame):
+            # Convert column names to indices
+
+            if isinstance(cluster_column, str):
+                cluster_column = X.columns.get_loc(cluster_column)
+
+            if random_effects and all([isinstance(name, str) for name in random_effects]):
+                random_effects = [X.columns.get_loc(name) for name in random_effects]
+
+            if fixed_effects and all([isinstance(name, str) for name in fixed_effects]):
+                fixed_effects = [X.columns.get_loc(name) for name in fixed_effects]
+
+        if fixed_effects == []:
+            fixed_effects = [i for i in np.arange(X.shape[1]) if i not in random_effects and i != cluster_column]
+
+        # Divide array into fixed and random effects, and clusters
+        clusters = pd.Series(X[:, cluster_column])
+        Z = X[:, random_effects] if random_effects else np.ones((len(X), 1))
+        X = X[:, fixed_effects]
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Initialization ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         n_clusters = clusters.nunique()
@@ -324,14 +336,6 @@ class MERF(BaseEstimator, RegressorMixin):
                 if curr_threshold < self.gll_early_stop_threshold:
                     logger.info("Gll {} less than threshold {}, stopping early ...".format(gll, curr_threshold))
                     early_stop_flag = True
-
-            # Compute Validation Loss
-            if X_val is not None:
-                yhat_val = self.predict(X_val, Z_val, clusters_val)
-                val_loss = np.square(np.subtract(y_val, yhat_val)).mean()
-                logger.info(f"Validation MSE Loss is {val_loss} at iteration {iteration}.")
-                self.val_loss_history_.append(val_loss)
-
         return self
 
     def score(self, X, Z, clusters, y):
