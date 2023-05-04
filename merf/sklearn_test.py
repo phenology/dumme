@@ -16,7 +16,7 @@ class TestSklearnComplaince(unittest.TestCase):
         check_estimator(LinearSVC())
 
     def test_merf_compliance(self):
-        """Check MERF compiance."""
+        """Check MERF compliance."""
         check_estimator(MERF())
 
 

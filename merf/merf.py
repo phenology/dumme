@@ -55,7 +55,7 @@ class MERF(BaseEstimator, RegressorMixin):
 
         self.cluster_counts = None
         # Note fixed_effects_model must already be instantiated when passed in.
-        self.fe_model = fixed_effects_model
+        self.fixed_effects_model = fixed_effects_model
         self.trained_fe_model = None
         self.trained_b = None
 
@@ -81,7 +81,7 @@ class MERF(BaseEstimator, RegressorMixin):
         if type(clusters) != pd.Series:
             raise TypeError("clusters must be a pandas Series.")
 
-        if self.trained_fe_model is None:
+        if not hasattr(self, "trained_fe_model"):
             raise NotFittedError(
                 "This MERF instance is not fitted yet. Call 'fit' with appropriate arguments before "
                 "using this method"
@@ -221,8 +221,8 @@ class MERF(BaseEstimator, RegressorMixin):
             assert len(y_star.shape) == 1
 
             # Do the fixed effects regression with all the fixed effects features
-            self.fe_model.fit(X, y_star)
-            f_hat = self.fe_model.predict(X)
+            self.fixed_effects_model.fit(X, y_star)
+            f_hat = self.fixed_effects_model.predict(X)
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ M-step ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             sigma2_hat_sum = 0
@@ -313,7 +313,7 @@ class MERF(BaseEstimator, RegressorMixin):
             self.gll_history.append(gll)
 
             # Save off the most updated fixed effects model and random effects coefficents
-            self.trained_fe_model = self.fe_model
+            self.trained_fe_model = self.fixed_effects_model
             self.trained_b = b_hat_df
 
             # Early Stopping. This code is entered only if the early stop threshold is specified and
