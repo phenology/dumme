@@ -5,13 +5,18 @@ import logging
 
 import numpy as np
 import pandas as pd
+from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.exceptions import NotFittedError
 
 logger = logging.getLogger(__name__)
 
 
-class MERF(object):
+# BaseEstimator has boilerplate for things like get_params, set_params
+# RegressorMixin adds attribute `_estimator_type = "regressor` and `score` method
+
+
+class MERF(BaseEstimator, RegressorMixin):
     """
     This is the core class to instantiate, train, and predict using a mixed effects random forest model.
     It roughly adheres to the sklearn estimator API.
