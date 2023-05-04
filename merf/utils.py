@@ -208,9 +208,9 @@ class MERFDataGenerator(object):
         # compute the ptev and prev
         sigma_fixed = self.m * sigma_g
         ptev = 100 * (
-            (sigma_fixed ** 2 + self.sigma_b ** 2) / (sigma_fixed ** 2 + self.sigma_b ** 2 + self.sigma_e ** 2)
+            (sigma_fixed**2 + self.sigma_b**2) / (sigma_fixed**2 + self.sigma_b**2 + self.sigma_e**2)
         )
-        prev = 100 * (self.sigma_b ** 2 / (sigma_fixed ** 2 + self.sigma_b ** 2))
+        prev = 100 * (self.sigma_b**2 / (sigma_fixed**2 + self.sigma_b**2))
 
         logger.info("Drew {} samples from {} clusters.".format(sum(n_samples_per_cluster), n_clusters))
         logger.info("PTEV = {}, PREV = {}.".format(ptev, prev))
