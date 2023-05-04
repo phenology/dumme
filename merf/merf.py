@@ -71,7 +71,7 @@ class MERF(BaseEstimator, RegressorMixin):
         if type(clusters) != pd.Series:
             raise TypeError("clusters must be a pandas Series.")
 
-        if not hasattr(self, "trained_fe_model"):
+        if not hasattr(self, "trained_fe_model_"):
             raise NotFittedError(
                 "This MERF instance is not fitted yet. Call 'fit' with appropriate arguments before "
                 "using this method"
@@ -80,11 +80,11 @@ class MERF(BaseEstimator, RegressorMixin):
         Z = np.array(Z)  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
 
         # Apply fixed effects model to all
-        y_hat = self.trained_fe_model.predict(X)
+        y_hat = self.trained_fe_model_.predict(X)
 
         # Apply random effects correction to all known clusters. Note that then, by default, the new clusters get no
         # random effects correction -- which is the desired behavior.
-        for cluster_id in self.cluster_counts.index:
+        for cluster_id in self.cluster_counts_.index:
             indices_i = clusters == cluster_id
 
             # If cluster doesn't exist in test data that's ok. Just move on.
@@ -92,7 +92,7 @@ class MERF(BaseEstimator, RegressorMixin):
                 continue
 
             # If cluster does exist, apply the correction.
-            b_i = self.trained_b.loc[cluster_id]
+            b_i = self.trained_b_.loc[cluster_id]
             Z_i = Z[indices_i]
             y_hat[indices_i] += Z_i.dot(b_i)
 
@@ -121,15 +121,15 @@ class MERF(BaseEstimator, RegressorMixin):
         Returns:
             MERF: fitted model
         """
-        self.cluster_counts = None
-        self.trained_fe_model = None
-        self.trained_b = None
+        self.cluster_counts_ = None
+        self.trained_fe_model_ = None
+        self.trained_b_ = None
 
-        self.b_hat_history = []
-        self.sigma2_hat_history = []
-        self.D_hat_history = []
-        self.gll_history = []
-        self.val_loss_history = []
+        self.b_hat_history_ = []
+        self.sigma2_hat_history_ = []
+        self.D_hat_history_ = []
+        self.gll_history_ = []
+        self.val_loss_history_ = []
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Input Checks ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         if type(clusters) != pd.Series:
@@ -155,7 +155,7 @@ class MERF(BaseEstimator, RegressorMixin):
         Z = np.array(Z)  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
 
         # Create a series where cluster_id is the index and n_i is the value
-        self.cluster_counts = clusters.value_counts()
+        self.cluster_counts_ = clusters.value_counts()
 
         # Do expensive slicing operations only once
         Z_by_cluster = {}
@@ -165,7 +165,7 @@ class MERF(BaseEstimator, RegressorMixin):
         indices_by_cluster = {}
 
         # TODO: Can these be replaced with groupbys? Groupbys are less understandable than brute force.
-        for cluster_id in self.cluster_counts.index:
+        for cluster_id in self.cluster_counts_.index:
             # Find the index for all the samples from this cluster in the large vector
             indices_i = clusters == cluster_id
             indices_by_cluster[cluster_id] = indices_i
@@ -175,22 +175,22 @@ class MERF(BaseEstimator, RegressorMixin):
             y_by_cluster[cluster_id] = y[indices_i]
 
             # Get the counts for each cluster and create the appropriately sized identity matrix for later computations
-            n_by_cluster[cluster_id] = self.cluster_counts[cluster_id]
-            I_by_cluster[cluster_id] = np.eye(self.cluster_counts[cluster_id])
+            n_by_cluster[cluster_id] = self.cluster_counts_[cluster_id]
+            I_by_cluster[cluster_id] = np.eye(self.cluster_counts_[cluster_id])
 
         # Intialize for EM algorithm
         iteration = 0
         # Note we are using a dataframe to hold the b_hat because this is easier to index into by cluster_id
         # Before we were using a simple numpy array -- but we were indexing into that wrong because the cluster_ids
         # are not necessarily in order.
-        b_hat_df = pd.DataFrame(np.zeros((n_clusters, q)), index=self.cluster_counts.index)
+        b_hat_df = pd.DataFrame(np.zeros((n_clusters, q)), index=self.cluster_counts_.index)
         sigma2_hat = 1
         D_hat = np.eye(q)
 
         # vectors to hold history
-        self.b_hat_history.append(b_hat_df)
-        self.sigma2_hat_history.append(sigma2_hat)
-        self.D_hat_history.append(D_hat)
+        self.b_hat_history_.append(b_hat_df)
+        self.sigma2_hat_history_.append(sigma2_hat)
+        self.D_hat_history_.append(D_hat)
 
         early_stop_flag = False
 
@@ -203,7 +203,7 @@ class MERF(BaseEstimator, RegressorMixin):
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ E-step ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # fill up y_star for all clusters
             y_star = np.zeros(len(y))
-            for cluster_id in self.cluster_counts.index:
+            for cluster_id in self.cluster_counts_.index:
                 # Get cached cluster slices
                 y_i = y_by_cluster[cluster_id]
                 Z_i = Z_by_cluster[cluster_id]
@@ -227,7 +227,7 @@ class MERF(BaseEstimator, RegressorMixin):
             sigma2_hat_sum = 0
             D_hat_sum = 0
 
-            for cluster_id in self.cluster_counts.index:
+            for cluster_id in self.cluster_counts_.index:
                 # Get cached cluster slices
                 indices_i = indices_by_cluster[cluster_id]
                 y_i = y_by_cluster[cluster_id]
@@ -277,13 +277,13 @@ class MERF(BaseEstimator, RegressorMixin):
             logger.debug("D_hat = {}".format(D_hat))
 
             # Store off history so that we can see the evolution of the EM algorithm
-            self.b_hat_history.append(b_hat_df.copy())
-            self.sigma2_hat_history.append(sigma2_hat)
-            self.D_hat_history.append(D_hat)
+            self.b_hat_history_.append(b_hat_df.copy())
+            self.sigma2_hat_history_.append(sigma2_hat)
+            self.D_hat_history_.append(D_hat)
 
             # Generalized Log Likelihood computation to check convergence
             gll = 0
-            for cluster_id in self.cluster_counts.index:
+            for cluster_id in self.cluster_counts_.index:
                 # Get cached cluster slices
                 indices_i = indices_by_cluster[cluster_id]
                 y_i = y_by_cluster[cluster_id]
@@ -309,16 +309,16 @@ class MERF(BaseEstimator, RegressorMixin):
                 )  # noqa: E127
 
             logger.info("Training GLL is {} at iteration {}.".format(gll, iteration))
-            self.gll_history.append(gll)
+            self.gll_history_.append(gll)
 
             # Save off the most updated fixed effects model and random effects coefficents
-            self.trained_fe_model = self.fixed_effects_model
-            self.trained_b = b_hat_df
+            self.trained_fe_model_ = self.fixed_effects_model
+            self.trained_b_ = b_hat_df
 
             # Early Stopping. This code is entered only if the early stop threshold is specified and
             # if the gll_history array is longer than 1 element, e.g. we are past the first iteration.
-            if self.gll_early_stop_threshold is not None and len(self.gll_history) > 1:
-                curr_threshold = np.abs((gll - self.gll_history[-2]) / self.gll_history[-2])
+            if self.gll_early_stop_threshold is not None and len(self.gll_history_) > 1:
+                curr_threshold = np.abs((gll - self.gll_history_[-2]) / self.gll_history_[-2])
                 logger.debug("stop threshold = {}".format(curr_threshold))
 
                 if curr_threshold < self.gll_early_stop_threshold:
@@ -330,7 +330,7 @@ class MERF(BaseEstimator, RegressorMixin):
                 yhat_val = self.predict(X_val, Z_val, clusters_val)
                 val_loss = np.square(np.subtract(y_val, yhat_val)).mean()
                 logger.info(f"Validation MSE Loss is {val_loss} at iteration {iteration}.")
-                self.val_loss_history.append(val_loss)
+                self.val_loss_history_.append(val_loss)
 
         return self
 
@@ -351,11 +351,11 @@ class MERF(BaseEstimator, RegressorMixin):
             pd.DataFrame: multi-index dataframe with outer index as iteration, inner index as cluster
         """
         # Step 1 - vertical stack all the arrays at each iteration into a single numpy array
-        b_array = np.vstack(self.b_hat_history)
+        b_array = np.vstack(self.b_hat_history_)
 
         # Step 2 - Create the multi-index. Note the outer index is iteration. The inner index is cluster.
-        iterations = range(len(self.b_hat_history))
-        clusters = self.b_hat_history[0].index
+        iterations = range(len(self.b_hat_history_))
+        clusters = self.b_hat_history_[0].index
         mi = pd.MultiIndex.from_product([iterations, clusters], names=("iteration", "cluster"))
 
         # Step 3 - Create the multi-indexed dataframe

@@ -121,8 +121,8 @@ class MERFTest(unittest.TestCase):
         m = MERF(max_iterations=5)
         # Train
         m.fit(self.X_train, self.Z_train, self.clusters_train, self.y_train)
-        self.assertEqual(len(m.gll_history), 5)
-        self.assertEqual(len(m.val_loss_history), 0)
+        self.assertEqual(len(m.gll_history_), 5)
+        self.assertEqual(len(m.val_loss_history_), 0)
         # Predict Known Clusters
         yhat_known = m.predict(self.X_known, self.Z_known, self.clusters_known)
         self.assertEqual(len(yhat_known), 5)
@@ -134,7 +134,7 @@ class MERFTest(unittest.TestCase):
         m = MERF(max_iterations=5)
         # Train
         m.fit(np.array(self.X_train), np.array(self.Z_train), self.clusters_train, self.y_train)
-        self.assertEqual(len(m.val_loss_history), 0)
+        self.assertEqual(len(m.val_loss_history_), 0)
         # Predict Known Clusters
         yhat_known = m.predict(np.array(self.X_known), np.array(self.Z_known), self.clusters_known)
         self.assertEqual(len(yhat_known), 5)
@@ -160,7 +160,7 @@ class MERFTest(unittest.TestCase):
         # Fit
         m.fit(self.X_train, self.Z_train, self.clusters_train, self.y_train)
         # The number of iterations should be less than max_iterations
-        self.assertTrue(len(m.gll_history) < 5)
+        self.assertTrue(len(m.gll_history_) < 5)
 
     def test_pickle(self):
         m = MERF(max_iterations=5)
@@ -191,7 +191,7 @@ class MERFTest(unittest.TestCase):
         m = MERF(fixed_effects_model=lgbm, max_iterations=5)
         # Train
         m.fit(self.X_train, self.Z_train, self.clusters_train, self.y_train)
-        self.assertEqual(len(m.gll_history), 5)
+        self.assertEqual(len(m.gll_history_), 5)
         # Predict Known Clusters
         yhat_known = m.predict(self.X_known, self.Z_known, self.clusters_known)
         self.assertEqual(len(yhat_known), 5)
@@ -213,7 +213,7 @@ class MERFTest(unittest.TestCase):
             self.clusters_known,
             self.y_known,
         )
-        self.assertEqual(len(m.val_loss_history), 5)
+        self.assertEqual(len(m.val_loss_history_), 5)
         # Predict Known Clusters
         yhat_known = m.predict(self.X_known, self.Z_known, self.clusters_known)
         self.assertEqual(len(yhat_known), 5)
@@ -234,7 +234,7 @@ class MERFTest(unittest.TestCase):
             self.clusters_new,
             self.y_new,
         )
-        self.assertEqual(len(m.val_loss_history), 3)
+        self.assertEqual(len(m.val_loss_history_), 3)
         # Predict Known Clusters
         yhat_known = m.predict(self.X_known, self.Z_known, self.clusters_known)
         self.assertEqual(len(yhat_known), 5)
