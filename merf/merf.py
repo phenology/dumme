@@ -370,10 +370,10 @@ class MERF(BaseEstimator, RegressorMixin):
                 fixed_effects = [X.columns.get_loc(name) for name in fixed_effects]
 
         if fixed_effects == []:
-            fixed_effects = [i for i in np.arange(X.shape[1]) if i not in random_effects and i != cluster_column]
+            fixed_effects = [i for i in range(X.shape[1]) if i not in random_effects and i != cluster_column]
 
         self.cluster_column_ = cluster_column
-        self.random_effects_ = random_effects if random_effects else np.ones((len(X)))
+        self.random_effects_ = random_effects
         self.fixed_effects_ = fixed_effects
 
     def _split_X_input(self, X):
@@ -381,6 +381,6 @@ class MERF(BaseEstimator, RegressorMixin):
         X = np.asarray(X)
 
         clusters = pd.Series(X[:, self.cluster_column_])
-        Z = X[:, self.random_effects_]
+        Z = X[:, self.random_effects_] if self.random_effects_ else np.ones((1, len(X)))
         X_ = X[:, self.fixed_effects_]
         return X_, clusters, Z
