@@ -2,6 +2,7 @@
 Mixed Effects Random Forest model.
 """
 import logging
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -58,7 +59,7 @@ class MERF(BaseEstimator, RegressorMixin):
     def predict(
         self,
         X: ArrayLike,
-        cluster_column: int | str = 0,
+        cluster_column: Union[int, str] = 0,
         fixed_effects: list = [],
         random_effects: list = [],
     ):
@@ -113,7 +114,7 @@ class MERF(BaseEstimator, RegressorMixin):
         self,
         X: ArrayLike,
         y: ArrayLike,
-        cluster_column: int | str = 0,
+        cluster_column: Union[int, str] = 0,
         fixed_effects: list = [],
         random_effects: list = [],
         X_val: ArrayLike = None,
