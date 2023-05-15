@@ -99,9 +99,9 @@ class MERF(BaseEstimator, RegressorMixin):
         self,
         X: ArrayLike,
         y: ArrayLike,
-        cluster_column: Union[int, str] = 0,
-        fixed_effects: list = [],
-        random_effects: list = [],
+        cluster_column: Union[int, str] = -1,
+        fixed_effects: Union[int, str, list[int], list[str]] = [],
+        random_effects: Union[int, str, list[int], list[str]] = [],
         X_val: ArrayLike = None,
         y_val: ArrayLike = None,
     ):
@@ -355,21 +355,61 @@ class MERF(BaseEstimator, RegressorMixin):
         b_hat_history_df = pd.DataFrame(b_array, index=mi)
         return b_hat_history_df
 
-    def _parse_fit_input(self, X, cluster_column, fixed_effects, random_effects):
+    def _parse_fit_input(
+        self,
+        X,
+        cluster_column: Union[int, str] = -1,
+        fixed_effects: Union[int, str, list[int], list[str]] = [],
+        random_effects: Union[int, str, list[int], list[str]] = [],
+    ):
         """Split input data into separate arrays for fixed and random effects, and clusters."""
+        if not X.ndim == 2:
+            raise ValueError("Input array X should be 2-dimensional.")
+
+        if not isinstance(random_effects, list):
+            random_effects = [random_effects]
+        if not isinstance(fixed_effects, list):
+            fixed_effects = [fixed_effects]
 
         if isinstance(X, pd.DataFrame):
-            # Convert column names to indices
             if isinstance(cluster_column, str):
                 cluster_column = X.columns.get_loc(cluster_column)
 
-            if random_effects and all([isinstance(name, str) for name in random_effects]):
-                random_effects = [X.columns.get_loc(name) for name in random_effects]
+            if random_effects:
+                if all([isinstance(name, str) for name in random_effects]):
+                    random_effects = [X.columns.get_loc(name) for name in random_effects]
 
-            if fixed_effects and all([isinstance(name, str) for name in fixed_effects]):
-                fixed_effects = [X.columns.get_loc(name) for name in fixed_effects]
+                elif not all([isinstance(item, int) for item in random_effects]):
+                    raise ValueError(
+                        "Got mixed input for random_effects." "Provide a list of only integers or only strings."
+                    )
 
-        if fixed_effects == []:
+            if fixed_effects:
+                if all([isinstance(name, str) for name in fixed_effects]):
+                    fixed_effects = [X.columns.get_loc(name) for name in fixed_effects]
+
+                elif not all([isinstance(item, int) for item in fixed_effects]):
+                    raise ValueError(
+                        "Got mixed input for fixed_effects." "Provide a list of only integers or only strings."
+                    )
+
+        # Now everything should be integers
+        if (
+            not isinstance(cluster_column, int)
+            or not np.all([isinstance(item, int) for item in random_effects])
+            or not np.all([isinstance(item, int) for item in fixed_effects])
+        ):
+            raise ValueError(
+                """
+                Unable to parse inputs for fit. If X is a numpy array, make sure
+                column indices are passed as ints. If X is a pandas array,
+                column indices may be str or int, but not mixed.
+            """
+            )
+
+        cluster_column %= X.shape[1]  # that way -1 also works
+
+        if not fixed_effects:
             fixed_effects = [i for i in range(X.shape[1]) if i not in random_effects and i != cluster_column]
 
         self.cluster_column_ = cluster_column

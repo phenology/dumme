@@ -229,5 +229,115 @@ class MERFTest(unittest.TestCase):
         plot_merf_training_stats(m)
 
 
+class MerfInputTests(unittest.TestCase):
+    """Collection of tests to verify input is parsed correctly."""
+
+    def setUp(self):
+        """Create a pandas dataframe for testing.
+
+        Dataframe will look something like this:
+
+                 X_0       X_1       X_2    Z  cluster
+        0   0.924864  0.845667  0.720978  1.0        0
+        4  -0.605465 -0.222457 -1.221667  1.0        1
+        5   1.214952 -0.792800  0.802716  1.0        1
+        6   0.303006  1.329137 -1.041186  1.0        1
+
+        """
+        dg = MERFDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
+        X, _, _, _, _, _ = dg.generate_split_samples([1, 3], [3, 2], [1, 1])
+        self.X = X.drop("y", axis=1)
+
+    def assert_valid_fit_input(self, X, *args, **kwargs):
+        str_args = ", ".join(["X"] + list(args) + [f"{k}:{v}" for k, v in kwargs.items()])
+        print(f"Test call: _parse_fit_input({str_args})")
+
+        merf = MERF()
+        merf._parse_fit_input(X, *args, **kwargs)
+
+        expected_cluster_column = 4
+        expected_random_effects = [3] if "random_effects" in kwargs else []
+        expected_fixed_effects = [0, 1, 2] if "random_effects" in kwargs or "fixed_effects" in kwargs else [0, 1, 2, 3]
+
+        assert merf.cluster_column_ == expected_cluster_column
+        assert merf.fixed_effects_ == expected_fixed_effects
+        assert merf.random_effects_ == expected_random_effects
+
+    def assert_invalid_fit_input(self, X, *args, **kwargs):
+        str_args = ", ".join(["X"] + list(args) + [f"{k}:{v}" for k, v in kwargs.items()])
+        print(f"Test call: _parse_fit_input({str_args})")
+
+        merf = MERF()
+
+        with self.assertRaises(ValueError):
+            merf._parse_fit_input(X, *args, **kwargs)
+
+    def test_parse_fit_input(self):
+        X = self.X
+
+        # Valid: pandas dataframe with strings as column indices
+        self.assert_valid_fit_input(X)
+        self.assert_valid_fit_input(X, cluster_column="cluster")
+        self.assert_valid_fit_input(X, cluster_column="cluster", random_effects=["Z"])
+        self.assert_valid_fit_input(X, cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"])
+        self.assert_valid_fit_input(
+            X, cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]
+        )
+        self.assert_valid_fit_input(X, fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"])
+        self.assert_valid_fit_input(X, fixed_effects=["X_0", "X_1", "X_2"])
+        self.assert_valid_fit_input(X, random_effects=["Z"])
+
+        # Valid: numpy array with ints as column indices
+        self.assert_valid_fit_input(np.array(X))
+        self.assert_valid_fit_input(np.array(X), cluster_column=4)
+        self.assert_valid_fit_input(np.array(X), cluster_column=4, random_effects=[3])
+        self.assert_valid_fit_input(np.array(X), cluster_column=4, fixed_effects=[0, 1, 2])
+        self.assert_valid_fit_input(np.array(X), cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3])
+        self.assert_valid_fit_input(np.array(X), fixed_effects=[0, 1, 2], random_effects=[3])
+        self.assert_valid_fit_input(np.array(X), fixed_effects=[0, 1, 2])
+        self.assert_valid_fit_input(np.array(X), random_effects=[3])
+
+        # Valid: pandas array with ints as column indices
+        self.assert_valid_fit_input(X)
+        self.assert_valid_fit_input(X, cluster_column=4)
+        self.assert_valid_fit_input(X, cluster_column=4, random_effects=[3])
+        self.assert_valid_fit_input(X, cluster_column=4, fixed_effects=[0, 1, 2])
+        self.assert_valid_fit_input(X, cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3])
+        self.assert_valid_fit_input(X, fixed_effects=[0, 1, 2], random_effects=[3])
+        self.assert_valid_fit_input(X, fixed_effects=[0, 1, 2])
+        self.assert_valid_fit_input(X, random_effects=[3])
+
+        # Valid: pandas array with mixes type column indices
+        self.assert_valid_fit_input(X)
+        self.assert_valid_fit_input(X, cluster_column=4)
+        self.assert_valid_fit_input(X, cluster_column=4, random_effects=["Z"])
+        self.assert_valid_fit_input(X, cluster_column="cluster", fixed_effects=[0, 1, 2])
+        self.assert_valid_fit_input(X, cluster_column=4, fixed_effects=["X_0", "X_1", "X_2"], random_effects=[3])
+        self.assert_valid_fit_input(X, fixed_effects=[0, 1, 2], random_effects=[3])
+        self.assert_valid_fit_input(X, fixed_effects=["X_0", "X_1", "X_2"])
+        self.assert_valid_fit_input(X, random_effects=["Z"])
+
+        # Valid: Z not as list
+        self.assert_valid_fit_input(X, random_effects="Z")
+        self.assert_valid_fit_input(X, random_effects=3)
+        self.assert_valid_fit_input(np.array(X), random_effects=3)
+
+        # Invalid: numpy array with strings as column indices
+        self.assert_invalid_fit_input(np.array(X), cluster_column="cluster")
+        self.assert_invalid_fit_input(np.array(X), cluster_column="cluster", random_effects=["Z"])
+        self.assert_invalid_fit_input(np.array(X), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"])
+        self.assert_invalid_fit_input(
+            np.array(X), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]
+        )
+        self.assert_invalid_fit_input(np.array(X), fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"])
+        self.assert_invalid_fit_input(np.array(X), fixed_effects=["X_0", "X_1", "X_2"])
+        self.assert_invalid_fit_input(np.array(X), random_effects=["Z"])
+
+        # Invalid: non-str / non-int arguments / mixed lists
+        self.assert_invalid_fit_input(X, random_effects=2.4)
+        self.assert_invalid_fit_input(X, random_effects=["a", 3, "b"])
+        self.assert_invalid_fit_input(np.array(X), cluster_column=(1,))
+
+
 if __name__ == "__main__":
     unittest.main()
