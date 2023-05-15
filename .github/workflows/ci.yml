@@ -19,14 +19,12 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r docker/requirements.txt
+        pip install .[dev]
     - name: Lint with black
       run: |
-        pip install black
         black --check merf
     - name: Lint with flake8
       run: |
-        pip install flake8
         # stop the build if there are Python syntax errors or undefined names
         flake8 merf --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
@@ -36,5 +34,5 @@ jobs:
         python merf/merf_test.py -v
     - name: Test SKlearn compliance
       run: |
-        pip install scikit-learn pycaret
+        pip install pycaret
         python merf/sklearn_test.py -v
