@@ -36,5 +36,5 @@ jobs:
         python merf/merf_test.py -v
     - name: Test SKlearn compliance
       run: |
-        pip install sklearn, pycaret
+        pip install scikit-learn pycaret
         python merf/sklearn_test.py -v
