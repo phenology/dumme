@@ -194,7 +194,7 @@ class MERFTest(unittest.TestCase):
         lgbm = LGBMRegressor()
         m = MERF(fixed_effects_model=lgbm, max_iterations=5)
         # Train
-        m.fit(self.X_train, self.y_train, **self.fit_kwargs)
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs, X_val=self.X_known, y_val=self.y_known)
         self.assertEqual(len(m.val_loss_history_), 5)
         # Predict Known Clusters
         yhat_known = m.predict(self.X_known, **self.fit_kwargs)
@@ -209,9 +209,9 @@ class MERFTest(unittest.TestCase):
         m.fit(
             np.array(self.X_train),
             self.y_train,
-            cluster_column=4,
-            fixed_effects=[0, 1, 2],
-            random_effects=[3],
+            **self.fit_kwargs_numpy,
+            X_val=np.array(self.X_known),
+            y_val=np.array(self.y_known),
         )
         self.assertEqual(len(m.val_loss_history_), 3)
         # Predict Known Clusters

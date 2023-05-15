@@ -116,6 +116,8 @@ class MERF(BaseEstimator, RegressorMixin):
         cluster_column: int | str = 0,
         fixed_effects: list = [],
         random_effects: list = [],
+        X_val: ArrayLike = None,
+        y_val: ArrayLike = None,
     ):
         """
         Fit MERF using Expectation-Maximization algorithm.
@@ -131,6 +133,10 @@ class MERF(BaseEstimator, RegressorMixin):
             random_effects: columns (names or indices) to use as random effects.
                 If not specified, an array of ones with shape (n, 1) is used,
                 where n = len(X)
+            X_val: validation array. If passed, validation loss against
+                the validation set is logged during model training.
+            y_val: validation array. If passed, validation loss against
+                the validation set is logged during model training.
 
         Returns:
             MERF: fitted model
@@ -327,6 +333,14 @@ class MERF(BaseEstimator, RegressorMixin):
                 if curr_threshold < self.gll_early_stop_threshold:
                     logger.info("Gll {} less than threshold {}, stopping early ...".format(gll, curr_threshold))
                     early_stop_flag = True
+
+            # Compute Validation Loss
+            if X_val is not None:
+                yhat_val = self.predict(X_val, cluster_column, fixed_effects, random_effects)
+                val_loss = np.square(np.subtract(y_val, yhat_val)).mean()
+                logger.info(f"Validation MSE Loss is {val_loss} at iteration {iteration}.")
+                self.val_loss_history_.append(val_loss)
+
         return self
 
     def get_bhat_history_df(self):
