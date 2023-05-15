@@ -149,6 +149,7 @@ class MERF(BaseEstimator, RegressorMixin):
 
         assert len(y) == len(X)
         X, clusters, Z = parse_input(X, cluster_column, fixed_effects, random_effects)
+        y = np.asarray(y)
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Initialization ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         n_clusters = clusters.nunique()
@@ -367,6 +368,8 @@ def parse_input(X, cluster_column, fixed_effects, random_effects):
 
         if fixed_effects and all([isinstance(name, str) for name in fixed_effects]):
             fixed_effects = [X.columns.get_loc(name) for name in fixed_effects]
+
+        X = np.asarray(X)
 
     if fixed_effects == []:
         fixed_effects = [i for i in np.arange(X.shape[1]) if i not in random_effects and i != cluster_column]

@@ -102,6 +102,11 @@ class MERFTest(unittest.TestCase):
         self.cluster_column = "cluster"
         self.fixed_effects = ["X_0", "X_1", "X_2"]
         self.random_effects = ["Z"]
+        self.fit_kwargs = dict(
+            cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects
+        )
+
+        self.fit_kwargs_numpy = dict(cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3])
 
         self.X_known = test_known
         self.y_known = test_known.pop("y")
@@ -117,26 +122,26 @@ class MERFTest(unittest.TestCase):
     def test_fit_and_predict_pandas(self):
         m = MERF(max_iterations=5)
         # Train
-        m.fit(self.X_train, self.y_train, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         self.assertEqual(len(m.gll_history_), 5)
         self.assertEqual(len(m.val_loss_history_), 0)
         # Predict Known Clusters
-        yhat_known = m.predict(self.X_known, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        yhat_known = m.predict(self.X_known, **self.fit_kwargs)
         self.assertEqual(len(yhat_known), 5)
         # Predict New Clusters
-        yhat_new = m.predict(self.X_new, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        yhat_new = m.predict(self.X_new, **self.fit_kwargs)
         self.assertEqual(len(yhat_new), 2)
 
     def test_fit_and_predict_numpy(self):
         m = MERF(max_iterations=5)
         # Train
-        m.fit(np.array(self.X_train), np.array(self.y_train), cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3],)
+        m.fit(np.array(self.X_train), np.array(self.y_train), **self.fit_kwargs_numpy)
         self.assertEqual(len(m.val_loss_history_), 0)
         # Predict Known Clusters
-        yhat_known = m.predict(np.array(self.X_known), cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        yhat_known = m.predict(np.array(self.X_known), **self.fit_kwargs_numpy)
         self.assertEqual(len(yhat_known), 5)
         # Predict New Clusters
-        yhat_new = m.predict(np.array(self.X_new), cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        yhat_new = m.predict(np.array(self.X_new), **self.fit_kwargs_numpy)
         self.assertEqual(len(yhat_new), 2)
 
     def test_type_error(self):
@@ -156,14 +161,14 @@ class MERFTest(unittest.TestCase):
         # Create a MERF model with a high early stopping threshold
         m = MERF(max_iterations=5, gll_early_stop_threshold=0.1)
         # Fit
-        m.fit(self.X_train, self.y_train, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         # The number of iterations should be less than max_iterations
         self.assertTrue(len(m.gll_history_) < 5)
 
     def test_pickle(self):
         m = MERF(max_iterations=5)
         # Train
-        m.fit(self.X_train, self.y_train, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs)
 
         # Write to pickle file
         with open("model.pkl", "wb") as fin:
@@ -176,44 +181,38 @@ class MERFTest(unittest.TestCase):
         # Check that m is not the same object as m_pkl
         self.assertIsNot(m_pkl, m)
         # Predict Known Clusters
-        yhat_known_pkl = m_pkl.predict(self.X_known, self.y_known, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
-        yhat_known = m.predict(self.X_known, self.y_known, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        yhat_known_pkl = m_pkl.predict(self.X_known, **self.fit_kwargs)
+        yhat_known = m.predict(self.X_known, **self.fit_kwargs)
         assert_almost_equal(yhat_known_pkl, yhat_known)
         # Predict New Clusters
-        yhat_new_pkl = m_pkl.predict(self.X_new, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
-        yhat_new = m.predict(self.X_new, self.y_new, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        yhat_new_pkl = m_pkl.predict(self.X_new, **self.fit_kwargs)
+        yhat_new = m.predict(self.X_new, **self.fit_kwargs)
         assert_almost_equal(yhat_new_pkl, yhat_new)
 
     def test_user_defined_fe_model(self):
         lgbm = LGBMRegressor()
         m = MERF(fixed_effects_model=lgbm, max_iterations=5)
         # Train
-        m.fit(self.X_train, self.y_train, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         self.assertEqual(len(m.gll_history_), 5)
         # Predict Known Clusters
-        yhat_known = m.predict(self.X_known, self.y_known, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        yhat_known = m.predict(self.X_known, **self.fit_kwargs)
         self.assertEqual(len(yhat_known), 5)
         # Predict New Clusters
-        yhat_new = m.predict(self.X_new, self.y_new, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        yhat_new = m.predict(self.X_new, **self.fit_kwargs)
         self.assertEqual(len(yhat_new), 2)
 
     def test_validation(self):
         lgbm = LGBMRegressor()
         m = MERF(fixed_effects_model=lgbm, max_iterations=5)
         # Train
-        m.fit(
-            self.X_train,
-            self.y_train,
-            cluster_column=self.cluster_column,
-            fixed_effects=self.fixed_effects,
-            random_effects=self.random_effects
-        )
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         self.assertEqual(len(m.val_loss_history_), 5)
         # Predict Known Clusters
-        yhat_known = m.predict(self.X_known, self.y_known, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        yhat_known = m.predict(self.X_known, **self.fit_kwargs)
         self.assertEqual(len(yhat_known), 5)
         # Predict New Clusters
-        yhat_new = m.predict(self.X_new, self.y_new, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        yhat_new = m.predict(self.X_new, **self.fit_kwargs)
         self.assertEqual(len(yhat_new), 2)
 
     def test_validation_numpy(self):
@@ -228,23 +227,17 @@ class MERFTest(unittest.TestCase):
         )
         self.assertEqual(len(m.val_loss_history_), 3)
         # Predict Known Clusters
-        yhat_known = m.predict(self.X_known, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        yhat_known = m.predict(self.X_known, **self.fit_kwargs)
         self.assertEqual(len(yhat_known), 5)
         # Predict New Clusters
-        yhat_new = m.predict(self.X_new, self.y_new, cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects)
+        yhat_new = m.predict(self.X_new, **self.fit_kwargs)
         self.assertEqual(len(yhat_new), 2)
 
     def test_viz(self):
         lgbm = LGBMRegressor()
         m = MERF(fixed_effects_model=lgbm, max_iterations=5)
         # Train
-        m.fit(
-            self.X_train,
-            self.y_train,
-            cluster_column=self.cluster_column,
-            fixed_effects=self.fixed_effects,
-            random_effects=self.random_effects
-        )
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         plot_merf_training_stats(m)
 
 
