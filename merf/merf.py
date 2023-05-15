@@ -56,39 +56,24 @@ class MERF(BaseEstimator, RegressorMixin):
         self.gll_early_stop_threshold = gll_early_stop_threshold
         self.max_iterations = max_iterations
 
-    def predict(
-        self,
-        X: ArrayLike,
-        cluster_column: Union[int, str] = 0,
-        fixed_effects: list = [],
-        random_effects: list = [],
-    ):
+    def predict(self, X: ArrayLike):
         """
         Predict using trained MERF.  For known clusters the trained random effect correction is applied.
         For unknown clusters the pure fixed effect (RF) estimate is used.
 
         Args:
             X: predictors (both fixed and random effect covariates)
-            cluster_column: name or index of column in X that contains cluster
-                assignments. Default is first column.
-            fixed_effects: columns (names or indices) to use as fixed effects.
-                If not specified, all columns except for those designated as cluster
-                or random effects are used.
-            random_effects: columns (names or indices) to use as random effects.
-                If not specified, an array of ones with shape (n, 1) is used,
-                where n = len(X)
 
         Returns:
             np.ndarray: the predictions y_hat
         """
-        X, clusters, Z = parse_input(X, cluster_column, fixed_effects, random_effects)
-
         if not hasattr(self, "trained_fe_model_"):
             raise NotFittedError(
                 "This MERF instance is not fitted yet. Call 'fit' with appropriate arguments before "
                 "using this method"
             )
 
+        X, clusters, Z = self._split_X_input(X)
         Z = np.array(Z)  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
 
         # Apply fixed effects model to all
@@ -155,7 +140,8 @@ class MERF(BaseEstimator, RegressorMixin):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Parse Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         assert len(y) == len(X)
-        X, clusters, Z = parse_input(X, cluster_column, fixed_effects, random_effects)
+        self._parse_fit_input(X, cluster_column, fixed_effects, random_effects)
+        X, clusters, Z = self._split_X_input(X)
         y = np.asarray(y)
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Initialization ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -337,7 +323,7 @@ class MERF(BaseEstimator, RegressorMixin):
 
             # Compute Validation Loss
             if X_val is not None:
-                yhat_val = self.predict(X_val, cluster_column, fixed_effects, random_effects)
+                yhat_val = self.predict(X_val)
                 val_loss = np.square(np.subtract(y_val, yhat_val)).mean()
                 logger.info(f"Validation MSE Loss is {val_loss} at iteration {iteration}.")
                 self.val_loss_history_.append(val_loss)
@@ -369,28 +355,32 @@ class MERF(BaseEstimator, RegressorMixin):
         b_hat_history_df = pd.DataFrame(b_array, index=mi)
         return b_hat_history_df
 
+    def _parse_fit_input(self, X, cluster_column, fixed_effects, random_effects):
+        """Split input data into separate arrays for fixed and random effects, and clusters."""
 
-def parse_input(X, cluster_column, fixed_effects, random_effects):
-    """Split input data into separate arrays for fixed and random effects, and clusters."""
+        if isinstance(X, pd.DataFrame):
+            # Convert column names to indices
+            if isinstance(cluster_column, str):
+                cluster_column = X.columns.get_loc(cluster_column)
 
-    if isinstance(X, pd.DataFrame):
-        # Convert column names to indices
-        if isinstance(cluster_column, str):
-            cluster_column = X.columns.get_loc(cluster_column)
+            if random_effects and all([isinstance(name, str) for name in random_effects]):
+                random_effects = [X.columns.get_loc(name) for name in random_effects]
 
-        if random_effects and all([isinstance(name, str) for name in random_effects]):
-            random_effects = [X.columns.get_loc(name) for name in random_effects]
+            if fixed_effects and all([isinstance(name, str) for name in fixed_effects]):
+                fixed_effects = [X.columns.get_loc(name) for name in fixed_effects]
 
-        if fixed_effects and all([isinstance(name, str) for name in fixed_effects]):
-            fixed_effects = [X.columns.get_loc(name) for name in fixed_effects]
+        if fixed_effects == []:
+            fixed_effects = [i for i in np.arange(X.shape[1]) if i not in random_effects and i != cluster_column]
 
+        self.cluster_column_ = cluster_column
+        self.random_effects_ = random_effects if random_effects else np.ones((len(X)))
+        self.fixed_effects_ = fixed_effects
+
+    def _split_X_input(self, X):
+        # Divide array into fixed and random effects, and clusters
         X = np.asarray(X)
 
-    if fixed_effects == []:
-        fixed_effects = [i for i in np.arange(X.shape[1]) if i not in random_effects and i != cluster_column]
-
-    # Divide array into fixed and random effects, and clusters
-    clusters = pd.Series(X[:, cluster_column])
-    Z = X[:, random_effects] if random_effects else np.ones((len(X), 1))
-    X = X[:, fixed_effects]
-    return X, clusters, Z
+        clusters = pd.Series(X[:, self.cluster_column_])
+        Z = X[:, self.random_effects_]
+        X_ = X[:, self.fixed_effects_]
+        return X_, clusters, Z
