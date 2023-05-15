@@ -17,7 +17,6 @@ class TestSklearnComplaince(unittest.TestCase):
         """Verify that check_estimator works for a native sklearn function."""
         check_estimator(LinearSVC())
 
-
     # This is really useful for develop, but can't manage to pass all checks.
     # Probably because there needs to be a categorial/integer column in the test
     # data to be used as clusters, and sklearn data doesn't have that.
@@ -43,7 +42,7 @@ class TestSklearnComplaince(unittest.TestCase):
 
         # Now with pycaret
         exp = RegressionExperiment()
-        exp.setup(data=train, target='y')
+        exp.setup(data=train, target="y")
 
         merf = exp.create_model(MERF(max_iterations=5), fit_kwargs=fit_kwargs, cross_validation=False)
 
