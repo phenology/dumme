@@ -17,13 +17,33 @@ class TestSklearnComplaince(unittest.TestCase):
         """Verify that check_estimator works for a native sklearn function."""
         check_estimator(LinearSVC())
 
-    # This is really useful for develop, but can't manage to pass all checks.
-    # Probably because there needs to be a categorial/integer column in the test
-    # data to be used as clusters, and sklearn data doesn't have that.
-    @unittest.skip("First checks should pass, but later tests don't.")
     def test_merf_compliance(self):
         """Check MERF compliance."""
-        check_estimator(MERF())
+        exclude_checks = [
+            # Can't fix due to absence of categorical column for clusters (?)
+            # "boolean index did not match indexed array along dimension 0"
+            'check_estimators_dtypes',
+            'check_fit_score_takes_y',
+            'check_estimators_fit_returns_self',
+            'check_complex_data',
+            'check_dtype_object',
+            'check_pipeline_consistency',
+            'check_estimators_overwrite_params',
+            'check_estimators_pickle',
+            'check_regressors_no_decision_function',
+            'check_supervised_y_2d',
+            'check_regressors_int',
+            # ...,
+        ]
+
+        checks = check_estimator(MERF(), generate_only=True)
+        for estimator, check in checks:
+            name = check.func.__name__
+            with self.subTest(check=name):
+                if name in exclude_checks:
+                    self.skipTest(f"Skipping {name}.")
+                else:
+                    check(estimator)
 
     def test_pycaret_compatible(self):
         """Check if can be used with pycaret."""
@@ -44,7 +64,7 @@ class TestSklearnComplaince(unittest.TestCase):
         exp = RegressionExperiment()
         exp.setup(data=train, target="y")
 
-        merf = exp.create_model(MERF(max_iterations=5), fit_kwargs=fit_kwargs, cross_validation=False)
+        exp.create_model(MERF(max_iterations=5), fit_kwargs=fit_kwargs, cross_validation=False)
 
 
 if __name__ == "__main__":
