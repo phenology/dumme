@@ -421,6 +421,6 @@ class MERF(BaseEstimator, RegressorMixin):
         X = np.asarray(X)
 
         clusters = pd.Series(X[:, self.cluster_column_])
-        Z = X[:, self.random_effects_] if self.random_effects_ else np.ones((1, len(X)))
+        Z = X[:, self.random_effects_] if self.random_effects_ else np.ones((len(X), 1))
         X_ = X[:, self.fixed_effects_]
         return X_, clusters, Z

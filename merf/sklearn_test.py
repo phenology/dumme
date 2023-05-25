@@ -12,7 +12,7 @@ from merf import MERF
 import numpy as np
 
 
-class TestSklearnComplaince(unittest.TestCase):
+class TestSklearnCompliance(unittest.TestCase):
     def test_compliance_checker(self):
         """Verify that check_estimator works for a native sklearn function."""
         check_estimator(LinearSVC())
@@ -20,19 +20,6 @@ class TestSklearnComplaince(unittest.TestCase):
     def test_merf_compliance(self):
         """Check MERF compliance."""
         exclude_checks = [
-            # Can't fix due to absence of categorical column for clusters (?)
-            # "boolean index did not match indexed array along dimension 0"
-            'check_estimators_dtypes',
-            'check_fit_score_takes_y',
-            'check_estimators_fit_returns_self',
-            'check_complex_data',
-            'check_dtype_object',
-            'check_pipeline_consistency',
-            'check_estimators_overwrite_params',
-            'check_estimators_pickle',
-            'check_regressors_no_decision_function',
-            'check_supervised_y_2d',
-            'check_regressors_int',
             # ...,
         ]
 
