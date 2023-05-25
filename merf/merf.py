@@ -10,6 +10,7 @@ from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.exceptions import NotFittedError
+from sklearn.utils import check_X_y
 
 
 logger = logging.getLogger(__name__)
@@ -139,7 +140,7 @@ class MERF(BaseEstimator, RegressorMixin):
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Parse Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        assert len(y) == len(X)
+        check_X_y(X, y)
         self._parse_fit_input(X, cluster_column, fixed_effects, random_effects)
         X, clusters, Z = self._split_X_input(X)
         y = np.asarray(y)
@@ -363,9 +364,7 @@ class MERF(BaseEstimator, RegressorMixin):
         random_effects: Union[int, str, list[int], list[str]] = [],
     ):
         """Split input data into separate arrays for fixed and random effects, and clusters."""
-        if not X.ndim == 2:
-            raise ValueError("Input array X should be 2-dimensional.")
-
+        X = np.asarray(X)
         if not isinstance(random_effects, list):
             random_effects = [random_effects]
         if not isinstance(fixed_effects, list):
