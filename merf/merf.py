@@ -59,8 +59,12 @@ class MERF(BaseEstimator, RegressorMixin):
 
     def predict(self, X: ArrayLike):
         """
-        Predict using trained MERF.  For known clusters the trained random effect correction is applied.
-        For unknown clusters the pure fixed effect (RF) estimate is used.
+        Predict using trained MERF.  For known clusters the trained random
+        effect correction is applied. For unknown clusters the pure fixed effect
+        (RF) estimate is used.
+
+        Note that the shape of X, including ordering of the columns, should be
+        the same as what was used for the `fit` method.
 
         Args:
             X: predictors (both fixed and random effect covariates)
