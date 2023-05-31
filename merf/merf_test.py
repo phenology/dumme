@@ -178,7 +178,7 @@ class MERFTest(unittest.TestCase):
         assert_almost_equal(yhat_new_pkl, yhat_new)
 
     def test_user_defined_fe_model(self):
-        lgbm = LGBMRegressor()
+        lgbm = LGBMRegressor
         m = MERF(fixed_effects_model=lgbm, max_iterations=5)
         # Train
         m.fit(self.X_train, self.y_train, **self.fit_kwargs)
@@ -191,7 +191,7 @@ class MERFTest(unittest.TestCase):
         self.assertEqual(len(yhat_new), 2)
 
     def test_validation(self):
-        lgbm = LGBMRegressor()
+        lgbm = LGBMRegressor
         m = MERF(fixed_effects_model=lgbm, max_iterations=5)
         # Train
         m.fit(self.X_train, self.y_train, **self.fit_kwargs, X_val=self.X_known, y_val=self.y_known)
@@ -222,7 +222,7 @@ class MERFTest(unittest.TestCase):
         self.assertEqual(len(yhat_new), 2)
 
     def test_viz(self):
-        lgbm = LGBMRegressor()
+        lgbm = LGBMRegressor
         m = MERF(fixed_effects_model=lgbm, max_iterations=5)
         # Train
         m.fit(self.X_train, self.y_train, **self.fit_kwargs)
