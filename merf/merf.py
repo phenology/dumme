@@ -78,6 +78,15 @@ class MERF(BaseEstimator, RegressorMixin):
                 "using this method"
             )
 
+        if np.asarray(X).ndim == 1 and not self.n_features_in_ == 1:
+            raise ValueError(
+                "Input columns do not correspond with shape of data on which this estimator was fitted. Reshape your data or re-fit the model."
+            )
+        if not len(X[0]) == self.n_features_in_:
+            raise ValueError(
+                "Input columns do not correspond with shape of data on which this estimator was fitted. Reshape your data or re-fit the model."
+            )
+
         X, clusters, Z = self._split_X_input(X)
         Z = np.array(Z)  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
 
@@ -132,6 +141,9 @@ class MERF(BaseEstimator, RegressorMixin):
         Returns:
             MERF: fitted model
         """
+        if not np.asarray(X).ndim == 2:
+            raise ValueError("X should be 2-dimensional.")
+        self.n_features_in_ = len(X[0])
         self.cluster_counts_ = None
         self.trained_fe_model_ = None
         self.trained_b_ = None
