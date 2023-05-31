@@ -15,6 +15,9 @@ from sklearn.utils import check_X_y
 logger = logging.getLogger(__name__)
 
 
+def model_builder():
+    return RandomForestRegressor(n_estimators=300, n_jobs=-1)
+
 # BaseEstimator has boilerplate for things like get_params, set_params
 # RegressorMixin adds attribute `_estimator_type = "regressor` and `score` method
 class MERF(BaseEstimator, RegressorMixin):
@@ -47,7 +50,7 @@ class MERF(BaseEstimator, RegressorMixin):
 
     def __init__(
         self,
-        fixed_effects_model=lambda: RandomForestRegressor(n_estimators=300, n_jobs=-1),
+        fixed_effects_model=model_builder,
         gll_early_stop_threshold=None,
         max_iterations=20,
     ):
@@ -70,7 +73,7 @@ class MERF(BaseEstimator, RegressorMixin):
         Returns:
             np.ndarray: the predictions y_hat
         """
-        check_is_fitted(self)
+        check_is_fitted(self, attributes=['trained_fe_model_', 'n_features_in_'])
         X = check_array(X)
 
         X, clusters, Z = self._split_X_input(X)
@@ -129,12 +132,15 @@ class MERF(BaseEstimator, RegressorMixin):
         """
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Parse Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        check_X_y(X, y)  # First check, then use, then overwrite X and y
+        check_X_y(X, y)  # First check, then parse columns, then overwrite X and y
         self._parse_fit_kwargs(X, cluster_column, fixed_effects, random_effects)
         X, y = check_X_y(X, y)
+
+        self.n_features_in_ = X.shape[1]
+
+        # Now split the input into fixed/random effects and cluster assignment
         X, clusters, Z = self._split_X_input(X)
 
-        self.n_features_in_ = len(X[0])
         self.cluster_counts_ = None
         self.trained_fe_model_ = None
         self.trained_b_ = None
@@ -404,19 +410,18 @@ class MERF(BaseEstimator, RegressorMixin):
             """
             )
 
-        cluster_column %= X.shape[1]  # that way -1 also works
+        ncols = np.asarray(X).shape[1]
+        cluster_column %= ncols  # that way -1 also works
 
         if not fixed_effects:
-            fixed_effects = [i for i in range(X.shape[1]) if i not in random_effects and i != cluster_column]
+            fixed_effects = [i for i in range(ncols) if i not in random_effects and i != cluster_column]
 
         self.cluster_column_ = cluster_column
         self.random_effects_ = random_effects
         self.fixed_effects_ = fixed_effects
 
     def _split_X_input(self, X):
-        # Divide array into fixed and random effects, and clusters
-        X = np.asarray(X)
-
+        """Divide array into fixed and random effects, and clusters."""
         clusters = pd.Series(X[:, self.cluster_column_])
         Z = X[:, self.random_effects_] if self.random_effects_ else np.ones((len(X), 1))
         X_ = X[:, self.fixed_effects_]
