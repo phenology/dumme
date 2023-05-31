@@ -7,7 +7,7 @@ from typing import Union
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
-from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.base import BaseEstimator, RegressorMixin, check_array, check_is_fitted
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.exceptions import NotFittedError
 from sklearn.utils import check_X_y
@@ -72,20 +72,8 @@ class MERF(BaseEstimator, RegressorMixin):
         Returns:
             np.ndarray: the predictions y_hat
         """
-        if not hasattr(self, "trained_fe_model_"):
-            raise NotFittedError(
-                "This MERF instance is not fitted yet. Call 'fit' with appropriate arguments before "
-                "using this method"
-            )
-
-        if np.asarray(X).ndim == 1 and not self.n_features_in_ == 1:
-            raise ValueError(
-                "Input columns do not correspond with shape of data on which this estimator was fitted. Reshape your data or re-fit the model."
-            )
-        if not len(X[0]) == self.n_features_in_:
-            raise ValueError(
-                "Input columns do not correspond with shape of data on which this estimator was fitted. Reshape your data or re-fit the model."
-            )
+        check_is_fitted(self)
+        X = check_array(X)
 
         X, clusters, Z = self._split_X_input(X)
         Z = np.array(Z)  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
@@ -141,8 +129,8 @@ class MERF(BaseEstimator, RegressorMixin):
         Returns:
             MERF: fitted model
         """
-        if not np.asarray(X).ndim == 2:
-            raise ValueError("X should be 2-dimensional.")
+        X, y = check_X_y(X, y)
+
         self.n_features_in_ = len(X[0])
         self.cluster_counts_ = None
         self.trained_fe_model_ = None
@@ -156,7 +144,6 @@ class MERF(BaseEstimator, RegressorMixin):
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Parse Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        check_X_y(X, y)
         self._parse_fit_input(X, cluster_column, fixed_effects, random_effects)
         X, clusters, Z = self._split_X_input(X)
         y = np.asarray(y)
