@@ -249,9 +249,6 @@ class MerfInputTests(unittest.TestCase):
         self.X = X.drop("y", axis=1)
 
     def assert_valid_fit_input(self, X, *args, **kwargs):
-        str_args = ", ".join(["X"] + list(args) + [f"{k}:{v}" for k, v in kwargs.items()])
-        print(f"Test call: _parse_fit_input({str_args})")
-
         merf = MERF()
         merf._parse_fit_kwargs(X, *args, **kwargs)
 
@@ -264,79 +261,83 @@ class MerfInputTests(unittest.TestCase):
         assert merf.random_effects_ == expected_random_effects
 
     def assert_invalid_fit_input(self, X, *args, **kwargs):
-        str_args = ", ".join(["X"] + list(args) + [f"{k}:{v}" for k, v in kwargs.items()])
-        print(f"Test call: _parse_fit_input({str_args})")
-
         merf = MERF()
-
         with self.assertRaises(ValueError):
             merf._parse_fit_kwargs(X, *args, **kwargs)
 
     def test_parse_fit_input(self):
         X = self.X
 
-        # Valid: pandas dataframe with strings as column indices
-        self.assert_valid_fit_input(X)
-        self.assert_valid_fit_input(X, cluster_column="cluster")
-        self.assert_valid_fit_input(X, cluster_column="cluster", random_effects=["Z"])
-        self.assert_valid_fit_input(X, cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"])
-        self.assert_valid_fit_input(
-            X, cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]
-        )
-        self.assert_valid_fit_input(X, fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"])
-        self.assert_valid_fit_input(X, fixed_effects=["X_0", "X_1", "X_2"])
-        self.assert_valid_fit_input(X, random_effects=["Z"])
+        valid_cases = [
+            # Valid: pandas dataframe with strings as column indices
+            dict(X=X),
+            dict(X=X, cluster_column="cluster"),
+            dict(X=X, cluster_column="cluster", random_effects=["Z"]),
+            dict(X=X, cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=X, cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(X=X, fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(X=X, fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=X, random_effects=["Z"]),
 
-        # Valid: numpy array with ints as column indices
-        self.assert_valid_fit_input(np.array(X))
-        self.assert_valid_fit_input(np.array(X), cluster_column=4)
-        self.assert_valid_fit_input(np.array(X), cluster_column=4, random_effects=[3])
-        self.assert_valid_fit_input(np.array(X), cluster_column=4, fixed_effects=[0, 1, 2])
-        self.assert_valid_fit_input(np.array(X), cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3])
-        self.assert_valid_fit_input(np.array(X), fixed_effects=[0, 1, 2], random_effects=[3])
-        self.assert_valid_fit_input(np.array(X), fixed_effects=[0, 1, 2])
-        self.assert_valid_fit_input(np.array(X), random_effects=[3])
+            # Valid: numpy array with ints as column indices
+            dict(X=np.array(X)),
+            dict(X=np.array(X), cluster_column=4),
+            dict(X=np.array(X), cluster_column=4, random_effects=[3]),
+            dict(X=np.array(X), cluster_column=4, fixed_effects=[0, 1, 2]),
+            dict(X=np.array(X), cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=np.array(X), fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=np.array(X), fixed_effects=[0, 1, 2]),
+            dict(X=np.array(X), random_effects=[3]),
 
-        # Valid: pandas array with ints as column indices
-        self.assert_valid_fit_input(X)
-        self.assert_valid_fit_input(X, cluster_column=4)
-        self.assert_valid_fit_input(X, cluster_column=4, random_effects=[3])
-        self.assert_valid_fit_input(X, cluster_column=4, fixed_effects=[0, 1, 2])
-        self.assert_valid_fit_input(X, cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3])
-        self.assert_valid_fit_input(X, fixed_effects=[0, 1, 2], random_effects=[3])
-        self.assert_valid_fit_input(X, fixed_effects=[0, 1, 2])
-        self.assert_valid_fit_input(X, random_effects=[3])
+            # Valid: pandas array with ints as column indices
+            dict(X=X),
+            dict(X=X, cluster_column=4),
+            dict(X=X, cluster_column=4, random_effects=[3]),
+            dict(X=X, cluster_column=4, fixed_effects=[0, 1, 2]),
+            dict(X=X, cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=X, fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=X, fixed_effects=[0, 1, 2]),
+            dict(X=X, random_effects=[3]),
 
-        # Valid: pandas array with mixes type column indices
-        self.assert_valid_fit_input(X)
-        self.assert_valid_fit_input(X, cluster_column=4)
-        self.assert_valid_fit_input(X, cluster_column=4, random_effects=["Z"])
-        self.assert_valid_fit_input(X, cluster_column="cluster", fixed_effects=[0, 1, 2])
-        self.assert_valid_fit_input(X, cluster_column=4, fixed_effects=["X_0", "X_1", "X_2"], random_effects=[3])
-        self.assert_valid_fit_input(X, fixed_effects=[0, 1, 2], random_effects=[3])
-        self.assert_valid_fit_input(X, fixed_effects=["X_0", "X_1", "X_2"])
-        self.assert_valid_fit_input(X, random_effects=["Z"])
+            # Valid: pandas array with mixes type column indices
+            dict(X=X),
+            dict(X=X, cluster_column=4),
+            dict(X=X, cluster_column=4, random_effects=["Z"]),
+            dict(X=X, cluster_column="cluster", fixed_effects=[0, 1, 2]),
+            dict(X=X, cluster_column=4, fixed_effects=["X_0", "X_1", "X_2"], random_effects=[3]),
+            dict(X=X, fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=X, fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=X, random_effects=["Z"]),
 
-        # Valid: Z not as list
-        self.assert_valid_fit_input(X, random_effects="Z")
-        self.assert_valid_fit_input(X, random_effects=3)
-        self.assert_valid_fit_input(np.array(X), random_effects=3)
+            # Valid: Z not as list
+            dict(X=X, random_effects="Z"),
+            dict(X=X, random_effects=3),
+            dict(X=np.array(X), random_effects=3),
+        ]
 
-        # Invalid: numpy array with strings as column indices
-        self.assert_invalid_fit_input(np.array(X), cluster_column="cluster")
-        self.assert_invalid_fit_input(np.array(X), cluster_column="cluster", random_effects=["Z"])
-        self.assert_invalid_fit_input(np.array(X), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"])
-        self.assert_invalid_fit_input(
-            np.array(X), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]
-        )
-        self.assert_invalid_fit_input(np.array(X), fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"])
-        self.assert_invalid_fit_input(np.array(X), fixed_effects=["X_0", "X_1", "X_2"])
-        self.assert_invalid_fit_input(np.array(X), random_effects=["Z"])
+        invalid_cases = [
+            # Invalid: numpy array with strings as column indices
+            dict(X=np.array(X), cluster_column="cluster"),
+            dict(X=np.array(X), cluster_column="cluster", random_effects=["Z"]),
+            dict(X=np.array(X), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=np.array(X), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(X=np.array(X), fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(X=np.array(X), fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=np.array(X), random_effects=["Z"]),
 
-        # Invalid: non-str / non-int arguments / mixed lists
-        self.assert_invalid_fit_input(X, random_effects=2.4)
-        self.assert_invalid_fit_input(X, random_effects=["a", 3, "b"])
-        self.assert_invalid_fit_input(np.array(X), cluster_column=(1,))
+            # Invalid: non-str / non-int arguments / mixed lists
+            dict(X=X, random_effects=2.4),
+            dict(X=X, random_effects=["a", 3, "b"]),
+            dict(X=np.array(X), cluster_column=(1,)),
+        ]
+
+        for i, case in enumerate(valid_cases):
+            with self.subTest(i):
+                self.assert_valid_fit_input(**case)
+
+        for i, case in enumerate(invalid_cases):
+            with self.subTest(i):
+                self.assert_invalid_fit_input(**case)
 
 
 if __name__ == "__main__":
