@@ -9,7 +9,6 @@ import pandas as pd
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, RegressorMixin, check_array, check_is_fitted
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.exceptions import NotFittedError
 from sklearn.utils import check_X_y
 
 
@@ -41,18 +40,17 @@ class MERF(BaseEstimator, RegressorMixin):
 
 
     Args:
-        fixed_effects_model (sklearn.base.RegressorMixin): instantiated model class
+        fixed_effects_model (sklearn.base.RegressorMixin): function that will return an instantiated model
         gll_early_stop_threshold (float): early stopping threshold on GLL improvement
         max_iterations (int): maximum number of EM iterations to train
     """
 
     def __init__(
         self,
-        fixed_effects_model=RandomForestRegressor(n_estimators=300, n_jobs=-1),
+        fixed_effects_model=lambda: RandomForestRegressor(n_estimators=300, n_jobs=-1),
         gll_early_stop_threshold=None,
         max_iterations=20,
     ):
-        # Note fixed_effects_model must already be instantiated when passed in.
         self.fixed_effects_model = fixed_effects_model
         self.gll_early_stop_threshold = gll_early_stop_threshold
         self.max_iterations = max_iterations
@@ -129,7 +127,12 @@ class MERF(BaseEstimator, RegressorMixin):
         Returns:
             MERF: fitted model
         """
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Parse Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        check_X_y(X, y)  # First check, then use, then overwrite X and y
+        self._parse_fit_kwargs(X, cluster_column, fixed_effects, random_effects)
         X, y = check_X_y(X, y)
+        X, clusters, Z = self._split_X_input(X)
 
         self.n_features_in_ = len(X[0])
         self.cluster_counts_ = None
@@ -141,12 +144,6 @@ class MERF(BaseEstimator, RegressorMixin):
         self.D_hat_history_ = []
         self.gll_history_ = []
         self.val_loss_history_ = []
-
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Parse Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-        self._parse_fit_input(X, cluster_column, fixed_effects, random_effects)
-        X, clusters, Z = self._split_X_input(X)
-        y = np.asarray(y)
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Initialization ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         n_clusters = clusters.nunique()
@@ -220,8 +217,8 @@ class MERF(BaseEstimator, RegressorMixin):
             assert len(y_star.shape) == 1
 
             # Do the fixed effects regression with all the fixed effects features
-            self.fixed_effects_model.fit(X, y_star)
-            f_hat = self.fixed_effects_model.predict(X)
+            self.trained_fe_model_ = self.fixed_effects_model().fit(X, y_star)
+            f_hat = self.trained_fe_model_.predict(X)
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ M-step ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             sigma2_hat_sum = 0
@@ -311,8 +308,7 @@ class MERF(BaseEstimator, RegressorMixin):
             logger.info("Training GLL is {} at iteration {}.".format(gll, iteration))
             self.gll_history_.append(gll)
 
-            # Save off the most updated fixed effects model and random effects coefficents
-            self.trained_fe_model_ = self.fixed_effects_model
+            # Save off the most updated random effects coefficents
             self.trained_b_ = b_hat_df
 
             # Early Stopping. This code is entered only if the early stop threshold is specified and
@@ -359,15 +355,14 @@ class MERF(BaseEstimator, RegressorMixin):
         b_hat_history_df = pd.DataFrame(b_array, index=mi)
         return b_hat_history_df
 
-    def _parse_fit_input(
+    def _parse_fit_kwargs(
         self,
         X,
         cluster_column: Union[int, str] = -1,
         fixed_effects: Union[int, str, list[int], list[str]] = [],
         random_effects: Union[int, str, list[int], list[str]] = [],
     ):
-        """Split input data into separate arrays for fixed and random effects, and clusters."""
-        X = np.asarray(X)
+        """Store column indices for fixed and random effects, and clusters."""
         if not isinstance(random_effects, list):
             random_effects = [random_effects]
         if not isinstance(fixed_effects, list):

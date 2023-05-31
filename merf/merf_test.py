@@ -253,7 +253,7 @@ class MerfInputTests(unittest.TestCase):
         print(f"Test call: _parse_fit_input({str_args})")
 
         merf = MERF()
-        merf._parse_fit_input(X, *args, **kwargs)
+        merf._parse_fit_kwargs(X, *args, **kwargs)
 
         expected_cluster_column = 4
         expected_random_effects = [3] if "random_effects" in kwargs else []
@@ -270,7 +270,7 @@ class MerfInputTests(unittest.TestCase):
         merf = MERF()
 
         with self.assertRaises(ValueError):
-            merf._parse_fit_input(X, *args, **kwargs)
+            merf._parse_fit_kwargs(X, *args, **kwargs)
 
     def test_parse_fit_input(self):
         X = self.X
