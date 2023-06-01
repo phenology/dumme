@@ -4,12 +4,13 @@ https://scikit-learn.org/stable/developers/develop.html#rolling-your-own-estimat
 """
 import unittest
 
-from sklearn.utils.estimator_checks import check_estimator
-from sklearn.svm import LinearSVC
-from utils import MERFDataGenerator
-from pycaret.regression import RegressionExperiment
-from merf import MERF
 import numpy as np
+from pycaret.regression import RegressionExperiment
+from sklearn.svm import LinearSVC
+from sklearn.utils.estimator_checks import check_estimator
+from utils import MERFDataGenerator
+
+from merf import MERF
 
 
 class TestSklearnCompliance(unittest.TestCase):

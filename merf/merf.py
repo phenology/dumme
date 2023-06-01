@@ -11,12 +11,12 @@ from sklearn.base import BaseEstimator, RegressorMixin, check_array, check_is_fi
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.utils import check_X_y
 
-
 logger = logging.getLogger(__name__)
 
 
 def model_builder():
     return RandomForestRegressor(n_estimators=300, n_jobs=-1)
+
 
 # BaseEstimator has boilerplate for things like get_params, set_params
 # RegressorMixin adds attribute `_estimator_type = "regressor` and `score` method
@@ -73,7 +73,7 @@ class MERF(BaseEstimator, RegressorMixin):
         Returns:
             np.ndarray: the predictions y_hat
         """
-        check_is_fitted(self, attributes=['trained_fe_model_', 'n_features_in_'])
+        check_is_fitted(self, attributes=["trained_fe_model_", "n_features_in_"])
         X = check_array(X)
 
         X, clusters, Z = self._split_X_input(X)

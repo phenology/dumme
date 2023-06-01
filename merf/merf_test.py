@@ -15,10 +15,10 @@ import pandas as pd
 from lightgbm import LGBMRegressor
 from numpy.testing import assert_almost_equal
 from sklearn.exceptions import NotFittedError
-
-from merf import MERF
 from utils import MERFDataGenerator
 from viz import plot_merf_training_stats
+
+from merf import MERF
 
 
 class DataGenerationTest(unittest.TestCase):
@@ -278,7 +278,6 @@ class MerfInputTests(unittest.TestCase):
             dict(X=X, fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
             dict(X=X, fixed_effects=["X_0", "X_1", "X_2"]),
             dict(X=X, random_effects=["Z"]),
-
             # Valid: numpy array with ints as column indices
             dict(X=np.array(X)),
             dict(X=np.array(X), cluster_column=4),
@@ -288,7 +287,6 @@ class MerfInputTests(unittest.TestCase):
             dict(X=np.array(X), fixed_effects=[0, 1, 2], random_effects=[3]),
             dict(X=np.array(X), fixed_effects=[0, 1, 2]),
             dict(X=np.array(X), random_effects=[3]),
-
             # Valid: nested list with ints as column indices
             dict(X=np.array(X).tolist()),
             dict(X=np.array(X).tolist(), cluster_column=4),
@@ -298,7 +296,6 @@ class MerfInputTests(unittest.TestCase):
             dict(X=np.array(X).tolist(), fixed_effects=[0, 1, 2], random_effects=[3]),
             dict(X=np.array(X).tolist(), fixed_effects=[0, 1, 2]),
             dict(X=np.array(X).tolist(), random_effects=[3]),
-
             # Valid: pandas array with ints as column indices
             dict(X=X),
             dict(X=X, cluster_column=4),
@@ -308,7 +305,6 @@ class MerfInputTests(unittest.TestCase):
             dict(X=X, fixed_effects=[0, 1, 2], random_effects=[3]),
             dict(X=X, fixed_effects=[0, 1, 2]),
             dict(X=X, random_effects=[3]),
-
             # Valid: pandas array with mixes type column indices
             dict(X=X),
             dict(X=X, cluster_column=4),
@@ -318,7 +314,6 @@ class MerfInputTests(unittest.TestCase):
             dict(X=X, fixed_effects=[0, 1, 2], random_effects=[3]),
             dict(X=X, fixed_effects=["X_0", "X_1", "X_2"]),
             dict(X=X, random_effects=["Z"]),
-
             # Valid: Z not as list
             dict(X=X, random_effects="Z"),
             dict(X=X, random_effects=3),
@@ -334,17 +329,19 @@ class MerfInputTests(unittest.TestCase):
             dict(X=np.array(X), fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
             dict(X=np.array(X), fixed_effects=["X_0", "X_1", "X_2"]),
             dict(X=np.array(X), random_effects=["Z"]),
-
             # Invalid: nested list with strings as column indices
             dict(X=np.array(X).tolist(), cluster_column="cluster"),
             dict(X=np.array(X).tolist(), cluster_column="cluster", random_effects=["Z"]),
             dict(X=np.array(X).tolist(), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"]),
-            dict(X=np.array(X).tolist(), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(
+                X=np.array(X).tolist(),
+                cluster_column="cluster",
+                fixed_effects=["X_0", "X_1", "X_2"],
+                random_effects=["Z"],
+            ),
             dict(X=np.array(X).tolist(), fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
             dict(X=np.array(X).tolist(), fixed_effects=["X_0", "X_1", "X_2"]),
             dict(X=np.array(X).tolist(), random_effects=["Z"]),
-
-
             # Invalid: non-str / non-int arguments / mixed lists
             dict(X=X, random_effects=2.4),
             dict(X=X, random_effects=["a", 3, "b"]),
