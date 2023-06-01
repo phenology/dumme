@@ -18,7 +18,7 @@ setup(
     classifiers=[
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.9",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     keywords="random forest machine learning mixed effects",
@@ -26,9 +26,10 @@ setup(
     author="Manifold, Inc.",
     author_email="sdey@manifold.ai",
     license="MIT",
-    python_requires='>=3.6',
+    python_requires='>=3.9',
     packages=find_packages(),
-    install_requires=["pandas>=1.0", "numpy", "scikit-learn", "matplotlib>=3.0"],
+    install_requires=["pandas>=1.0", "numpy>=1.20", "scikit-learn", "matplotlib>=3.0", "lightgbm"],
+    extras_require={"dev": ["black", "flake8", "pycaret"]},
     include_package_data=True,
     zip_safe=False,
 )

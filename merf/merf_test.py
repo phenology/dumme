@@ -15,10 +15,10 @@ import pandas as pd
 from lightgbm import LGBMRegressor
 from numpy.testing import assert_almost_equal
 from sklearn.exceptions import NotFittedError
-
-from merf import MERF
 from utils import MERFDataGenerator
 from viz import plot_merf_training_stats
+
+from merf import MERF
 
 
 class DataGenerationTest(unittest.TestCase):
@@ -97,75 +97,66 @@ class MERFTest(unittest.TestCase):
         dg = MERFDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
         train, test_known, test_new, train_cluster_ids, ptev, prev = dg.generate_split_samples([1, 3], [3, 2], [1, 1])
 
-        self.X_train = train[["X_0", "X_1", "X_2"]]
-        self.Z_train = train[["Z"]]
-        self.clusters_train = train["cluster"]
-        self.y_train = train["y"]
+        self.X_train = train
+        self.y_train = train.pop("y")
+        self.cluster_column = "cluster"
+        self.fixed_effects = ["X_0", "X_1", "X_2"]
+        self.random_effects = ["Z"]
+        self.fit_kwargs = dict(
+            cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects
+        )
 
-        self.X_known = test_known[["X_0", "X_1", "X_2"]]
-        self.Z_known = test_known[["Z"]]
-        self.clusters_known = test_known["cluster"]
-        self.y_known = test_known["y"]
+        self.fit_kwargs_numpy = dict(cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3])
 
-        self.X_new = test_new[["X_0", "X_1", "X_2"]]
-        self.Z_new = test_new[["Z"]]
-        self.clusters_new = test_new["cluster"]
-        self.y_new = test_new["y"]
+        self.X_known = test_known
+        self.y_known = test_known.pop("y")
+
+        self.X_new = test_new
+        self.y_new = test_new.pop("y")
 
     def test_not_fitted_error(self):
         m = MERF()
         with self.assertRaises(NotFittedError):
-            m.predict(self.X_known, self.Z_known, self.clusters_known)
+            m.predict(self.X_known)
 
     def test_fit_and_predict_pandas(self):
         m = MERF(max_iterations=5)
         # Train
-        m.fit(self.X_train, self.Z_train, self.clusters_train, self.y_train)
-        self.assertEqual(len(m.gll_history), 5)
-        self.assertEqual(len(m.val_loss_history), 0)
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs)
+        self.assertEqual(len(m.gll_history_), 5)
+        self.assertEqual(len(m.val_loss_history_), 0)
         # Predict Known Clusters
-        yhat_known = m.predict(self.X_known, self.Z_known, self.clusters_known)
+        yhat_known = m.predict(self.X_known)
         self.assertEqual(len(yhat_known), 5)
         # Predict New Clusters
-        yhat_new = m.predict(self.X_new, self.Z_new, self.clusters_new)
+        yhat_new = m.predict(self.X_new)
         self.assertEqual(len(yhat_new), 2)
 
     def test_fit_and_predict_numpy(self):
         m = MERF(max_iterations=5)
         # Train
-        m.fit(np.array(self.X_train), np.array(self.Z_train), self.clusters_train, self.y_train)
-        self.assertEqual(len(m.val_loss_history), 0)
+        m.fit(np.array(self.X_train), np.array(self.y_train), **self.fit_kwargs_numpy)
+        self.assertEqual(len(m.val_loss_history_), 0)
         # Predict Known Clusters
-        yhat_known = m.predict(np.array(self.X_known), np.array(self.Z_known), self.clusters_known)
+        yhat_known = m.predict(np.array(self.X_known))
         self.assertEqual(len(yhat_known), 5)
         # Predict New Clusters
-        yhat_new = m.predict(np.array(self.X_new), np.array(self.Z_new), self.clusters_new)
+        yhat_new = m.predict(np.array(self.X_new))
         self.assertEqual(len(yhat_new), 2)
-
-    def test_type_error(self):
-        m = MERF(max_iterations=5)
-        self.assertRaises(
-            TypeError,
-            m.fit,
-            np.array(self.X_train),
-            np.array(self.Z_train),
-            np.array(self.clusters_train),
-            self.y_train,
-        )
 
     def test_early_stopping(self):
         np.random.seed(3187)
         # Create a MERF model with a high early stopping threshold
         m = MERF(max_iterations=5, gll_early_stop_threshold=0.1)
         # Fit
-        m.fit(self.X_train, self.Z_train, self.clusters_train, self.y_train)
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         # The number of iterations should be less than max_iterations
-        self.assertTrue(len(m.gll_history) < 5)
+        self.assertTrue(len(m.gll_history_) < 5)
 
     def test_pickle(self):
         m = MERF(max_iterations=5)
         # Train
-        m.fit(self.X_train, self.Z_train, self.clusters_train, self.y_train)
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs)
 
         # Write to pickle file
         with open("model.pkl", "wb") as fin:
@@ -178,47 +169,38 @@ class MERFTest(unittest.TestCase):
         # Check that m is not the same object as m_pkl
         self.assertIsNot(m_pkl, m)
         # Predict Known Clusters
-        yhat_known_pkl = m_pkl.predict(self.X_known, self.Z_known, self.clusters_known)
-        yhat_known = m.predict(self.X_known, self.Z_known, self.clusters_known)
+        yhat_known_pkl = m_pkl.predict(self.X_known)
+        yhat_known = m.predict(self.X_known)
         assert_almost_equal(yhat_known_pkl, yhat_known)
         # Predict New Clusters
-        yhat_new_pkl = m_pkl.predict(self.X_new, self.Z_new, self.clusters_new)
-        yhat_new = m.predict(self.X_new, self.Z_new, self.clusters_new)
+        yhat_new_pkl = m_pkl.predict(self.X_new)
+        yhat_new = m.predict(self.X_new)
         assert_almost_equal(yhat_new_pkl, yhat_new)
 
     def test_user_defined_fe_model(self):
-        lgbm = LGBMRegressor()
+        lgbm = LGBMRegressor
         m = MERF(fixed_effects_model=lgbm, max_iterations=5)
         # Train
-        m.fit(self.X_train, self.Z_train, self.clusters_train, self.y_train)
-        self.assertEqual(len(m.gll_history), 5)
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs)
+        self.assertEqual(len(m.gll_history_), 5)
         # Predict Known Clusters
-        yhat_known = m.predict(self.X_known, self.Z_known, self.clusters_known)
+        yhat_known = m.predict(self.X_known)
         self.assertEqual(len(yhat_known), 5)
         # Predict New Clusters
-        yhat_new = m.predict(self.X_new, self.Z_new, self.clusters_new)
+        yhat_new = m.predict(self.X_new)
         self.assertEqual(len(yhat_new), 2)
 
     def test_validation(self):
-        lgbm = LGBMRegressor()
+        lgbm = LGBMRegressor
         m = MERF(fixed_effects_model=lgbm, max_iterations=5)
         # Train
-        m.fit(
-            self.X_train,
-            self.Z_train,
-            self.clusters_train,
-            self.y_train,
-            self.X_known,
-            self.Z_known,
-            self.clusters_known,
-            self.y_known,
-        )
-        self.assertEqual(len(m.val_loss_history), 5)
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs, X_val=self.X_known, y_val=self.y_known)
+        self.assertEqual(len(m.val_loss_history_), 5)
         # Predict Known Clusters
-        yhat_known = m.predict(self.X_known, self.Z_known, self.clusters_known)
+        yhat_known = m.predict(self.X_known)
         self.assertEqual(len(yhat_known), 5)
         # Predict New Clusters
-        yhat_new = m.predict(self.X_new, self.Z_new, self.clusters_new)
+        yhat_new = m.predict(self.X_new)
         self.assertEqual(len(yhat_new), 2)
 
     def test_validation_numpy(self):
@@ -226,37 +208,153 @@ class MERFTest(unittest.TestCase):
         # Train
         m.fit(
             np.array(self.X_train),
-            np.array(self.Z_train),
-            self.clusters_train,
             self.y_train,
-            np.array(self.X_new),
-            np.array(self.Z_new),
-            self.clusters_new,
-            self.y_new,
+            **self.fit_kwargs_numpy,
+            X_val=np.array(self.X_known),
+            y_val=np.array(self.y_known),
         )
-        self.assertEqual(len(m.val_loss_history), 3)
+        self.assertEqual(len(m.val_loss_history_), 3)
         # Predict Known Clusters
-        yhat_known = m.predict(self.X_known, self.Z_known, self.clusters_known)
+        yhat_known = m.predict(self.X_known)
         self.assertEqual(len(yhat_known), 5)
         # Predict New Clusters
-        yhat_new = m.predict(self.X_new, self.Z_new, self.clusters_new)
+        yhat_new = m.predict(self.X_new)
         self.assertEqual(len(yhat_new), 2)
 
     def test_viz(self):
-        lgbm = LGBMRegressor()
+        lgbm = LGBMRegressor
         m = MERF(fixed_effects_model=lgbm, max_iterations=5)
         # Train
-        m.fit(
-            self.X_train,
-            self.Z_train,
-            self.clusters_train,
-            self.y_train,
-            self.X_known,
-            self.Z_known,
-            self.clusters_known,
-            self.y_known,
-        )
+        m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         plot_merf_training_stats(m)
+
+
+class MerfInputTests(unittest.TestCase):
+    """Collection of tests to verify input is parsed correctly."""
+
+    def setUp(self):
+        """Create a pandas dataframe for testing.
+
+        Dataframe will look something like this:
+
+                 X_0       X_1       X_2    Z  cluster
+        0   0.924864  0.845667  0.720978  1.0        0
+        4  -0.605465 -0.222457 -1.221667  1.0        1
+        5   1.214952 -0.792800  0.802716  1.0        1
+        6   0.303006  1.329137 -1.041186  1.0        1
+
+        """
+        dg = MERFDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
+        X, _, _, _, _, _ = dg.generate_split_samples([1, 3], [3, 2], [1, 1])
+        self.X = X.drop("y", axis=1)
+
+    def assert_valid_fit_input(self, X, *args, **kwargs):
+        merf = MERF()
+        merf._parse_fit_kwargs(X, *args, **kwargs)
+
+        expected_cluster_column = 4
+        expected_random_effects = [3] if "random_effects" in kwargs else []
+        expected_fixed_effects = [0, 1, 2] if "random_effects" in kwargs or "fixed_effects" in kwargs else [0, 1, 2, 3]
+
+        assert merf.cluster_column_ == expected_cluster_column
+        assert merf.fixed_effects_ == expected_fixed_effects
+        assert merf.random_effects_ == expected_random_effects
+
+    def assert_invalid_fit_input(self, X, *args, **kwargs):
+        merf = MERF()
+        with self.assertRaises(ValueError):
+            merf._parse_fit_kwargs(X, *args, **kwargs)
+
+    def test_parse_fit_input(self):
+        X = self.X
+
+        valid_cases = [
+            # Valid: pandas dataframe with strings as column indices
+            dict(X=X),
+            dict(X=X, cluster_column="cluster"),
+            dict(X=X, cluster_column="cluster", random_effects=["Z"]),
+            dict(X=X, cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=X, cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(X=X, fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(X=X, fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=X, random_effects=["Z"]),
+            # Valid: numpy array with ints as column indices
+            dict(X=np.array(X)),
+            dict(X=np.array(X), cluster_column=4),
+            dict(X=np.array(X), cluster_column=4, random_effects=[3]),
+            dict(X=np.array(X), cluster_column=4, fixed_effects=[0, 1, 2]),
+            dict(X=np.array(X), cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=np.array(X), fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=np.array(X), fixed_effects=[0, 1, 2]),
+            dict(X=np.array(X), random_effects=[3]),
+            # Valid: nested list with ints as column indices
+            dict(X=np.array(X).tolist()),
+            dict(X=np.array(X).tolist(), cluster_column=4),
+            dict(X=np.array(X).tolist(), cluster_column=4, random_effects=[3]),
+            dict(X=np.array(X).tolist(), cluster_column=4, fixed_effects=[0, 1, 2]),
+            dict(X=np.array(X).tolist(), cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=np.array(X).tolist(), fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=np.array(X).tolist(), fixed_effects=[0, 1, 2]),
+            dict(X=np.array(X).tolist(), random_effects=[3]),
+            # Valid: pandas array with ints as column indices
+            dict(X=X),
+            dict(X=X, cluster_column=4),
+            dict(X=X, cluster_column=4, random_effects=[3]),
+            dict(X=X, cluster_column=4, fixed_effects=[0, 1, 2]),
+            dict(X=X, cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=X, fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=X, fixed_effects=[0, 1, 2]),
+            dict(X=X, random_effects=[3]),
+            # Valid: pandas array with mixes type column indices
+            dict(X=X),
+            dict(X=X, cluster_column=4),
+            dict(X=X, cluster_column=4, random_effects=["Z"]),
+            dict(X=X, cluster_column="cluster", fixed_effects=[0, 1, 2]),
+            dict(X=X, cluster_column=4, fixed_effects=["X_0", "X_1", "X_2"], random_effects=[3]),
+            dict(X=X, fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=X, fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=X, random_effects=["Z"]),
+            # Valid: Z not as list
+            dict(X=X, random_effects="Z"),
+            dict(X=X, random_effects=3),
+            dict(X=np.array(X), random_effects=3),
+        ]
+
+        invalid_cases = [
+            # Invalid: numpy array with strings as column indices
+            dict(X=np.array(X), cluster_column="cluster"),
+            dict(X=np.array(X), cluster_column="cluster", random_effects=["Z"]),
+            dict(X=np.array(X), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=np.array(X), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(X=np.array(X), fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(X=np.array(X), fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=np.array(X), random_effects=["Z"]),
+            # Invalid: nested list with strings as column indices
+            dict(X=np.array(X).tolist(), cluster_column="cluster"),
+            dict(X=np.array(X).tolist(), cluster_column="cluster", random_effects=["Z"]),
+            dict(X=np.array(X).tolist(), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(
+                X=np.array(X).tolist(),
+                cluster_column="cluster",
+                fixed_effects=["X_0", "X_1", "X_2"],
+                random_effects=["Z"],
+            ),
+            dict(X=np.array(X).tolist(), fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(X=np.array(X).tolist(), fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=np.array(X).tolist(), random_effects=["Z"]),
+            # Invalid: non-str / non-int arguments / mixed lists
+            dict(X=X, random_effects=2.4),
+            dict(X=X, random_effects=["a", 3, "b"]),
+            dict(X=np.array(X), cluster_column=(1,)),
+        ]
+
+        for i, case in enumerate(valid_cases):
+            with self.subTest(i):
+                self.assert_valid_fit_input(**case)
+
+        for i, case in enumerate(invalid_cases):
+            with self.subTest(i):
+                self.assert_invalid_fit_input(**case)
 
 
 if __name__ == "__main__":

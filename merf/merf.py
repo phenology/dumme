@@ -2,16 +2,25 @@
 Mixed Effects Random Forest model.
 """
 import logging
+from typing import Union
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
+from sklearn.base import BaseEstimator, RegressorMixin, check_array, check_is_fitted
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.exceptions import NotFittedError
+from sklearn.utils import check_X_y
 
 logger = logging.getLogger(__name__)
 
 
-class MERF(object):
+def model_builder():
+    return RandomForestRegressor(n_estimators=300, n_jobs=-1)
+
+
+# BaseEstimator has boilerplate for things like get_params, set_params
+# RegressorMixin adds attribute `_estimator_type = "regressor` and `score` method
+class MERF(BaseEstimator, RegressorMixin):
     """
     This is the core class to instantiate, train, and predict using a mixed effects random forest model.
     It roughly adheres to the sklearn estimator API.
@@ -34,62 +43,48 @@ class MERF(object):
 
 
     Args:
-        fixed_effects_model (sklearn.base.RegressorMixin): instantiated model class
+        fixed_effects_model (sklearn.base.RegressorMixin): function that will return an instantiated model
         gll_early_stop_threshold (float): early stopping threshold on GLL improvement
         max_iterations (int): maximum number of EM iterations to train
     """
 
     def __init__(
         self,
-        fixed_effects_model=RandomForestRegressor(n_estimators=300, n_jobs=-1),
+        fixed_effects_model=model_builder,
         gll_early_stop_threshold=None,
         max_iterations=20,
     ):
+        self.fixed_effects_model = fixed_effects_model
         self.gll_early_stop_threshold = gll_early_stop_threshold
         self.max_iterations = max_iterations
 
-        self.cluster_counts = None
-        # Note fixed_effects_model must already be instantiated when passed in.
-        self.fe_model = fixed_effects_model
-        self.trained_fe_model = None
-        self.trained_b = None
-
-        self.b_hat_history = []
-        self.sigma2_hat_history = []
-        self.D_hat_history = []
-        self.gll_history = []
-        self.val_loss_history = []
-
-    def predict(self, X: np.ndarray, Z: np.ndarray, clusters: pd.Series):
+    def predict(self, X: ArrayLike):
         """
-        Predict using trained MERF.  For known clusters the trained random effect correction is applied.
-        For unknown clusters the pure fixed effect (RF) estimate is used.
+        Predict using trained MERF.  For known clusters the trained random
+        effect correction is applied. For unknown clusters the pure fixed effect
+        (RF) estimate is used.
+
+        Note that the shape of X, including ordering of the columns, should be
+        the same as what was used for the `fit` method.
 
         Args:
-            X (np.ndarray): fixed effect covariates
-            Z (np.ndarray): random effect covariates
-            clusters (pd.Series): cluster assignments for samples
+            X: predictors (both fixed and random effect covariates)
 
         Returns:
             np.ndarray: the predictions y_hat
         """
-        if type(clusters) != pd.Series:
-            raise TypeError("clusters must be a pandas Series.")
+        check_is_fitted(self, attributes=["trained_fe_model_", "n_features_in_"])
+        X = check_array(X)
 
-        if self.trained_fe_model is None:
-            raise NotFittedError(
-                "This MERF instance is not fitted yet. Call 'fit' with appropriate arguments before "
-                "using this method"
-            )
-
+        X, clusters, Z = self._split_X_input(X)
         Z = np.array(Z)  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
 
         # Apply fixed effects model to all
-        y_hat = self.trained_fe_model.predict(X)
+        y_hat = self.trained_fe_model_.predict(X)
 
         # Apply random effects correction to all known clusters. Note that then, by default, the new clusters get no
         # random effects correction -- which is the desired behavior.
-        for cluster_id in self.cluster_counts.index:
+        for cluster_id in self.cluster_counts_.index:
             indices_i = clusters == cluster_id
 
             # If cluster doesn't exist in test data that's ok. Just move on.
@@ -97,7 +92,7 @@ class MERF(object):
                 continue
 
             # If cluster does exist, apply the correction.
-            b_i = self.trained_b.loc[cluster_id]
+            b_i = self.trained_b_.loc[cluster_id]
             Z_i = Z[indices_i]
             y_hat[indices_i] += Z_i.dot(b_i)
 
@@ -105,44 +100,56 @@ class MERF(object):
 
     def fit(
         self,
-        X: np.ndarray,
-        Z: np.ndarray,
-        clusters: pd.Series,
-        y: np.ndarray,
-        X_val: np.ndarray = None,
-        Z_val: np.ndarray = None,
-        clusters_val: pd.Series = None,
-        y_val: np.ndarray = None,
+        X: ArrayLike,
+        y: ArrayLike,
+        cluster_column: Union[int, str] = -1,
+        fixed_effects: Union[int, str, list[int], list[str]] = [],
+        random_effects: Union[int, str, list[int], list[str]] = [],
+        X_val: ArrayLike = None,
+        y_val: ArrayLike = None,
     ):
         """
         Fit MERF using Expectation-Maximization algorithm.
 
         Args:
-            X (np.ndarray): fixed effect covariates
-            Z (np.ndarray): random effect covariates
-            clusters (pd.Series): cluster assignments for samples
-            y (np.ndarray): response/target variable
+            X: predictors (both fixed and random effect covariates)
+            y: response/target variable
+            cluster_column: name or index of column in X that contains cluster
+                assignments. Default is first column.
+            fixed_effects: columns (names or indices) to use as fixed effects.
+                If not specified, all columns except for those designated as cluster
+                or random effects are used.
+            random_effects: columns (names or indices) to use as random effects.
+                If not specified, an array of ones with shape (n, 1) is used,
+                where n = len(X)
+            X_val: validation array. If passed, validation loss against
+                the validation set is logged during model training.
+            y_val: validation array. If passed, validation loss against
+                the validation set is logged during model training.
 
         Returns:
             MERF: fitted model
         """
 
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Input Checks ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        if type(clusters) != pd.Series:
-            raise TypeError("clusters must be a pandas Series.")
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Parse Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        check_X_y(X, y)  # First check, then parse columns, then overwrite X and y
+        self._parse_fit_kwargs(X, cluster_column, fixed_effects, random_effects)
+        X, y = check_X_y(X, y)
 
-        assert len(Z) == len(X)
-        assert len(y) == len(X)
-        assert len(clusters) == len(X)
+        self.n_features_in_ = X.shape[1]
 
-        if X_val is None:
-            assert Z_val is None
-            assert clusters_val is None
-            assert y_val is None
-        else:
-            assert len(Z_val) == len(X_val)
-            assert len(clusters_val) == len(X_val)
-            assert len(y_val) == len(X_val)
+        # Now split the input into fixed/random effects and cluster assignment
+        X, clusters, Z = self._split_X_input(X)
+
+        self.cluster_counts_ = None
+        self.trained_fe_model_ = None
+        self.trained_b_ = None
+
+        self.b_hat_history_ = []
+        self.sigma2_hat_history_ = []
+        self.D_hat_history_ = []
+        self.gll_history_ = []
+        self.val_loss_history_ = []
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Initialization ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         n_clusters = clusters.nunique()
@@ -151,7 +158,7 @@ class MERF(object):
         Z = np.array(Z)  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
 
         # Create a series where cluster_id is the index and n_i is the value
-        self.cluster_counts = clusters.value_counts()
+        self.cluster_counts_ = clusters.value_counts()
 
         # Do expensive slicing operations only once
         Z_by_cluster = {}
@@ -161,7 +168,7 @@ class MERF(object):
         indices_by_cluster = {}
 
         # TODO: Can these be replaced with groupbys? Groupbys are less understandable than brute force.
-        for cluster_id in self.cluster_counts.index:
+        for cluster_id in self.cluster_counts_.index:
             # Find the index for all the samples from this cluster in the large vector
             indices_i = clusters == cluster_id
             indices_by_cluster[cluster_id] = indices_i
@@ -171,22 +178,22 @@ class MERF(object):
             y_by_cluster[cluster_id] = y[indices_i]
 
             # Get the counts for each cluster and create the appropriately sized identity matrix for later computations
-            n_by_cluster[cluster_id] = self.cluster_counts[cluster_id]
-            I_by_cluster[cluster_id] = np.eye(self.cluster_counts[cluster_id])
+            n_by_cluster[cluster_id] = self.cluster_counts_[cluster_id]
+            I_by_cluster[cluster_id] = np.eye(self.cluster_counts_[cluster_id])
 
         # Intialize for EM algorithm
         iteration = 0
         # Note we are using a dataframe to hold the b_hat because this is easier to index into by cluster_id
         # Before we were using a simple numpy array -- but we were indexing into that wrong because the cluster_ids
         # are not necessarily in order.
-        b_hat_df = pd.DataFrame(np.zeros((n_clusters, q)), index=self.cluster_counts.index)
+        b_hat_df = pd.DataFrame(np.zeros((n_clusters, q)), index=self.cluster_counts_.index)
         sigma2_hat = 1
         D_hat = np.eye(q)
 
         # vectors to hold history
-        self.b_hat_history.append(b_hat_df)
-        self.sigma2_hat_history.append(sigma2_hat)
-        self.D_hat_history.append(D_hat)
+        self.b_hat_history_.append(b_hat_df)
+        self.sigma2_hat_history_.append(sigma2_hat)
+        self.D_hat_history_.append(D_hat)
 
         early_stop_flag = False
 
@@ -199,7 +206,7 @@ class MERF(object):
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ E-step ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             # fill up y_star for all clusters
             y_star = np.zeros(len(y))
-            for cluster_id in self.cluster_counts.index:
+            for cluster_id in self.cluster_counts_.index:
                 # Get cached cluster slices
                 y_i = y_by_cluster[cluster_id]
                 Z_i = Z_by_cluster[cluster_id]
@@ -216,14 +223,14 @@ class MERF(object):
             assert len(y_star.shape) == 1
 
             # Do the fixed effects regression with all the fixed effects features
-            self.fe_model.fit(X, y_star)
-            f_hat = self.fe_model.predict(X)
+            self.trained_fe_model_ = self.fixed_effects_model().fit(X, y_star)
+            f_hat = self.trained_fe_model_.predict(X)
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ M-step ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             sigma2_hat_sum = 0
             D_hat_sum = 0
 
-            for cluster_id in self.cluster_counts.index:
+            for cluster_id in self.cluster_counts_.index:
                 # Get cached cluster slices
                 indices_i = indices_by_cluster[cluster_id]
                 y_i = y_by_cluster[cluster_id]
@@ -273,13 +280,13 @@ class MERF(object):
             logger.debug("D_hat = {}".format(D_hat))
 
             # Store off history so that we can see the evolution of the EM algorithm
-            self.b_hat_history.append(b_hat_df.copy())
-            self.sigma2_hat_history.append(sigma2_hat)
-            self.D_hat_history.append(D_hat)
+            self.b_hat_history_.append(b_hat_df.copy())
+            self.sigma2_hat_history_.append(sigma2_hat)
+            self.D_hat_history_.append(D_hat)
 
             # Generalized Log Likelihood computation to check convergence
             gll = 0
-            for cluster_id in self.cluster_counts.index:
+            for cluster_id in self.cluster_counts_.index:
                 # Get cached cluster slices
                 indices_i = indices_by_cluster[cluster_id]
                 y_i = y_by_cluster[cluster_id]
@@ -305,16 +312,15 @@ class MERF(object):
                 )  # noqa: E127
 
             logger.info("Training GLL is {} at iteration {}.".format(gll, iteration))
-            self.gll_history.append(gll)
+            self.gll_history_.append(gll)
 
-            # Save off the most updated fixed effects model and random effects coefficents
-            self.trained_fe_model = self.fe_model
-            self.trained_b = b_hat_df
+            # Save off the most updated random effects coefficents
+            self.trained_b_ = b_hat_df
 
             # Early Stopping. This code is entered only if the early stop threshold is specified and
             # if the gll_history array is longer than 1 element, e.g. we are past the first iteration.
-            if self.gll_early_stop_threshold is not None and len(self.gll_history) > 1:
-                curr_threshold = np.abs((gll - self.gll_history[-2]) / self.gll_history[-2])
+            if self.gll_early_stop_threshold is not None and len(self.gll_history_) > 1:
+                curr_threshold = np.abs((gll - self.gll_history_[-2]) / self.gll_history_[-2])
                 logger.debug("stop threshold = {}".format(curr_threshold))
 
                 if curr_threshold < self.gll_early_stop_threshold:
@@ -323,15 +329,12 @@ class MERF(object):
 
             # Compute Validation Loss
             if X_val is not None:
-                yhat_val = self.predict(X_val, Z_val, clusters_val)
+                yhat_val = self.predict(X_val)
                 val_loss = np.square(np.subtract(y_val, yhat_val)).mean()
                 logger.info(f"Validation MSE Loss is {val_loss} at iteration {iteration}.")
-                self.val_loss_history.append(val_loss)
+                self.val_loss_history_.append(val_loss)
 
         return self
-
-    def score(self, X, Z, clusters, y):
-        raise NotImplementedError()
 
     def get_bhat_history_df(self):
         """
@@ -347,13 +350,79 @@ class MERF(object):
             pd.DataFrame: multi-index dataframe with outer index as iteration, inner index as cluster
         """
         # Step 1 - vertical stack all the arrays at each iteration into a single numpy array
-        b_array = np.vstack(self.b_hat_history)
+        b_array = np.vstack(self.b_hat_history_)
 
         # Step 2 - Create the multi-index. Note the outer index is iteration. The inner index is cluster.
-        iterations = range(len(self.b_hat_history))
-        clusters = self.b_hat_history[0].index
+        iterations = range(len(self.b_hat_history_))
+        clusters = self.b_hat_history_[0].index
         mi = pd.MultiIndex.from_product([iterations, clusters], names=("iteration", "cluster"))
 
         # Step 3 - Create the multi-indexed dataframe
         b_hat_history_df = pd.DataFrame(b_array, index=mi)
         return b_hat_history_df
+
+    def _parse_fit_kwargs(
+        self,
+        X,
+        cluster_column: Union[int, str] = -1,
+        fixed_effects: Union[int, str, list[int], list[str]] = [],
+        random_effects: Union[int, str, list[int], list[str]] = [],
+    ):
+        """Store column indices for fixed and random effects, and clusters."""
+        if not isinstance(random_effects, list):
+            random_effects = [random_effects]
+        if not isinstance(fixed_effects, list):
+            fixed_effects = [fixed_effects]
+
+        if isinstance(X, pd.DataFrame):
+            if isinstance(cluster_column, str):
+                cluster_column = X.columns.get_loc(cluster_column)
+
+            if random_effects:
+                if all([isinstance(name, str) for name in random_effects]):
+                    random_effects = [X.columns.get_loc(name) for name in random_effects]
+
+                elif not all([isinstance(item, int) for item in random_effects]):
+                    raise ValueError(
+                        "Got mixed input for random_effects." "Provide a list of only integers or only strings."
+                    )
+
+            if fixed_effects:
+                if all([isinstance(name, str) for name in fixed_effects]):
+                    fixed_effects = [X.columns.get_loc(name) for name in fixed_effects]
+
+                elif not all([isinstance(item, int) for item in fixed_effects]):
+                    raise ValueError(
+                        "Got mixed input for fixed_effects." "Provide a list of only integers or only strings."
+                    )
+
+        # Now everything should be integers
+        if (
+            not isinstance(cluster_column, int)
+            or not np.all([isinstance(item, int) for item in random_effects])
+            or not np.all([isinstance(item, int) for item in fixed_effects])
+        ):
+            raise ValueError(
+                """
+                Unable to parse inputs for fit. If X is a numpy array, make sure
+                column indices are passed as ints. If X is a pandas array,
+                column indices may be str or int, but not mixed.
+            """
+            )
+
+        ncols = np.asarray(X).shape[1]
+        cluster_column %= ncols  # that way -1 also works
+
+        if not fixed_effects:
+            fixed_effects = [i for i in range(ncols) if i not in random_effects and i != cluster_column]
+
+        self.cluster_column_ = cluster_column
+        self.random_effects_ = random_effects
+        self.fixed_effects_ = fixed_effects
+
+    def _split_X_input(self, X):
+        """Divide array into fixed and random effects, and clusters."""
+        clusters = pd.Series(X[:, self.cluster_column_])
+        Z = X[:, self.random_effects_] if self.random_effects_ else np.ones((len(X), 1))
+        X_ = X[:, self.fixed_effects_]
+        return X_, clusters, Z
