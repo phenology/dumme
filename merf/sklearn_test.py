@@ -57,7 +57,6 @@ class TestSklearnCompliance(unittest.TestCase):
         # Now with pycaret
         exp = RegressionExperiment()
         exp.setup(data=train, target="y")
-
         exp.create_model(MERF(max_iterations=5), fit_kwargs=fit_kwargs, cross_validation=False)
 
 

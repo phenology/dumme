@@ -289,6 +289,16 @@ class MerfInputTests(unittest.TestCase):
             dict(X=np.array(X), fixed_effects=[0, 1, 2]),
             dict(X=np.array(X), random_effects=[3]),
 
+            # Valid: nested list with ints as column indices
+            dict(X=np.array(X).tolist()),
+            dict(X=np.array(X).tolist(), cluster_column=4),
+            dict(X=np.array(X).tolist(), cluster_column=4, random_effects=[3]),
+            dict(X=np.array(X).tolist(), cluster_column=4, fixed_effects=[0, 1, 2]),
+            dict(X=np.array(X).tolist(), cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=np.array(X).tolist(), fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(X=np.array(X).tolist(), fixed_effects=[0, 1, 2]),
+            dict(X=np.array(X).tolist(), random_effects=[3]),
+
             # Valid: pandas array with ints as column indices
             dict(X=X),
             dict(X=X, cluster_column=4),
@@ -324,6 +334,16 @@ class MerfInputTests(unittest.TestCase):
             dict(X=np.array(X), fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
             dict(X=np.array(X), fixed_effects=["X_0", "X_1", "X_2"]),
             dict(X=np.array(X), random_effects=["Z"]),
+
+            # Invalid: nested list with strings as column indices
+            dict(X=np.array(X).tolist(), cluster_column="cluster"),
+            dict(X=np.array(X).tolist(), cluster_column="cluster", random_effects=["Z"]),
+            dict(X=np.array(X).tolist(), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=np.array(X).tolist(), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(X=np.array(X).tolist(), fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(X=np.array(X).tolist(), fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(X=np.array(X).tolist(), random_effects=["Z"]),
+
 
             # Invalid: non-str / non-int arguments / mixed lists
             dict(X=X, random_effects=2.4),
