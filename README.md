@@ -1,3 +1,6 @@
+Branch of https://github.com/manifoldai/merf that has been changed to be (mostly) compliant with the SKlearn API.
+
+
 # Mixed Effects Random Forest
 
 ![](https://github.com/manifoldai/merf/workflows/CI/badge.svg)
@@ -36,7 +39,7 @@ Note that one key assumption of the MERF model is that the random effect is *lin
 
 The algorithms implemented in this repo were developed by Ahlem Hajjem, Francois Bellavance, and Denis Larocque and published in a paper [here](http://www.tandfonline.com/doi/abs/10.1080/00949655.2012.741599).  Many thanks to Ahlem and Denis for providing an R reference and aiding in the debugging of this code. Quick note, the published paper has a small typo in the update equation for sigma^2 which is corrected in the source code here.
 
-## Using the Code
+## Using the Code (outdated!)
 
 The MERF code is modelled after scikit-learn estimators.  To use, you instantiate a MERF object.  As of 1.0, you can pass any non-linear estimator for the fixed effect. By default this is a scikit-learn random forest, but you can pass any model you wish that conforms to the scikit-learn estimator API, e.g. LightGBM, XGBoost, a properly wrapped PyTorch neural net, 
 
