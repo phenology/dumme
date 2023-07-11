@@ -7,6 +7,7 @@ def builder(**kwargs):
 
 
 class MEEBM(MERF):
+    """Mixed with Explainable Boosting Machine as fixed effects model."""
     def __init__(
         self,
         gll_early_stop_threshold=None,
