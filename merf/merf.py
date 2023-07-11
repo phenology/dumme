@@ -53,10 +53,12 @@ class MERF(BaseEstimator, RegressorMixin):
         fixed_effects_model=model_builder,
         gll_early_stop_threshold=None,
         max_iterations=20,
+        **fe_kwargs,
     ):
         self.fixed_effects_model = fixed_effects_model
         self.gll_early_stop_threshold = gll_early_stop_threshold
         self.max_iterations = max_iterations
+        self.fe_args = fe_kwargs
 
     def predict(self, X: ArrayLike):
         """
@@ -223,7 +225,7 @@ class MERF(BaseEstimator, RegressorMixin):
             assert len(y_star.shape) == 1
 
             # Do the fixed effects regression with all the fixed effects features
-            self.trained_fe_model_ = self.fixed_effects_model().fit(X, y_star)
+            self.trained_fe_model_ = self.fixed_effects_model(**self.fe_args).fit(X, y_star)
             f_hat = self.trained_fe_model_.predict(X)
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ M-step ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
