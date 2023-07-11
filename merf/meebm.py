@@ -1,22 +1,25 @@
 from interpret.glassbox import ExplainableBoostingRegressor
-from merf.merf import MERF
+from sklearn.ensemble import RandomForestRegressor
+
+from merf.merf import MixedEffectsModel
 
 
-def builder(**kwargs):
-    return ExplainableBoostingRegressor(**kwargs)
+class MEEBM(MixedEffectsModel):
+    """Mixed-effects explainable boosting machines.
+
+    Mixed-effects model with explainable boosting machine regressor as fixed
+    effects model.
+    """
+    @property
+    def fixed_effects_model(self):
+        return ExplainableBoostingRegressor(**self.fe_kwargs)
 
 
-class MEEBM(MERF):
-    """Mixed with Explainable Boosting Machine as fixed effects model."""
-    def __init__(
-        self,
-        gll_early_stop_threshold=None,
-        max_iterations=20,
-        **fe_kwargs,
-    ):
-        super().__init__(
-            fixed_effects_model=builder,
-            max_iterations=max_iterations,
-            gll_early_stop_threshold=gll_early_stop_threshold,
-            **fe_kwargs,
-        )
+class MERF(MixedEffectsModel):
+    """Mixed-effects random forests.
+
+    Mixed-effects model with random forest regressor as fixed effects model.
+    """
+    @property
+    def fixed_effects_model(self):
+        return RandomForestRegressor(**self.fe_kwargs)

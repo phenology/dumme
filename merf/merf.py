@@ -8,19 +8,14 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, RegressorMixin, check_array, check_is_fitted
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.utils import check_X_y
 
 logger = logging.getLogger(__name__)
 
 
-def model_builder():
-    return RandomForestRegressor(n_estimators=300, n_jobs=-1)
-
-
 # BaseEstimator has boilerplate for things like get_params, set_params
 # RegressorMixin adds attribute `_estimator_type = "regressor` and `score` method
-class MERF(BaseEstimator, RegressorMixin):
+class MixedEffectsModel(BaseEstimator, RegressorMixin):
     """
     This is the core class to instantiate, train, and predict using a mixed effects random forest model.
     It roughly adheres to the sklearn estimator API.
@@ -41,24 +36,25 @@ class MERF(BaseEstimator, RegressorMixin):
     * i is the cluster index. Assume k clusters in the training.
     * bi is the random effect coefficients. They are different per cluster i but are assumed to be drawn from the same distribution ~N(0, Sigma_b) where Sigma_b is learned from the data.
 
-
     Args:
-        fixed_effects_model (sklearn.base.RegressorMixin): function that will return an instantiated model
         gll_early_stop_threshold (float): early stopping threshold on GLL improvement
         max_iterations (int): maximum number of EM iterations to train
     """
 
     def __init__(
         self,
-        fixed_effects_model=model_builder,
         gll_early_stop_threshold=None,
         max_iterations=20,
         **fe_kwargs,
     ):
-        self.fixed_effects_model = fixed_effects_model
         self.gll_early_stop_threshold = gll_early_stop_threshold
         self.max_iterations = max_iterations
-        self.fe_args = fe_kwargs
+        self.fe_kwargs = fe_kwargs
+
+    @property
+    def fixed_effects_model(self):
+        # TODO by default run a linear model?
+        raise NotImplementedError()
 
     def predict(self, X: ArrayLike):
         """
@@ -225,7 +221,7 @@ class MERF(BaseEstimator, RegressorMixin):
             assert len(y_star.shape) == 1
 
             # Do the fixed effects regression with all the fixed effects features
-            self.trained_fe_model_ = self.fixed_effects_model(**self.fe_args).fit(X, y_star)
+            self.trained_fe_model_ = self.fixed_effects_model.fit(X, y_star)
             f_hat = self.trained_fe_model_.predict(X)
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ M-step ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

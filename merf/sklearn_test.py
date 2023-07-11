@@ -10,7 +10,7 @@ from sklearn.svm import LinearSVC
 from sklearn.utils.estimator_checks import check_estimator
 from utils import MERFDataGenerator
 
-from merf import MERF
+from merf.meebm import MERF
 
 
 class TestSklearnCompliance(unittest.TestCase):
