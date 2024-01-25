@@ -15,8 +15,8 @@ import pandas as pd
 from lightgbm import LGBMRegressor
 from numpy.testing import assert_almost_equal
 from sklearn.exceptions import NotFittedError
-from utils import MERFDataGenerator
-from viz import plot_merf_training_stats
+from dumme.utils import DummeDataGenerator
+from dumme.viz import plot_merf_training_stats
 from sklearn.ensemble import RandomForestRegressor
 
 from merf import MixedEffectsModel
@@ -24,14 +24,14 @@ from merf import MixedEffectsModel
 
 class DataGenerationTest(unittest.TestCase):
     def test_create_cluster_sizes(self):
-        clusters = MERFDataGenerator.create_cluster_sizes_array([1, 2, 3], 1)
+        clusters = DummeDataGenerator.create_cluster_sizes_array([1, 2, 3], 1)
         self.assertListEqual(clusters, [1, 2, 3])
 
-        clusters = MERFDataGenerator.create_cluster_sizes_array([30, 20, 7], 3)
+        clusters = DummeDataGenerator.create_cluster_sizes_array([30, 20, 7], 3)
         self.assertListEqual(clusters, [30, 30, 30, 20, 20, 20, 7, 7, 7])
 
     def test_generate_samples(self):
-        dg = MERFDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
+        dg = DummeDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
         df, ptev, prev = dg.generate_samples([1, 2, 3])
         # check columns
         self.assertListEqual(df.columns.tolist(), ["y", "X_0", "X_1", "X_2", "Z", "cluster"])
@@ -43,7 +43,7 @@ class DataGenerationTest(unittest.TestCase):
         self.assertEqual(len(df[df["cluster"] == 2]), 3)
 
     def test_generate_split_samples(self):
-        dg = MERFDataGenerator(m=0.7, sigma_b=2.7, sigma_e=1)
+        dg = DummeDataGenerator(m=0.7, sigma_b=2.7, sigma_e=1)
         train, test_known, test_new, training_ids, ptev, prev = dg.generate_split_samples([1, 3], [3, 2], [1, 1])
         # check all have same columns
         self.assertListEqual(train.columns.tolist(), ["y", "X_0", "X_1", "X_2", "Z", "cluster"])
@@ -69,7 +69,7 @@ class DataGenerationTest(unittest.TestCase):
     def test_ohe_clusters(self):
         training_cluster_ids = np.array([0, 1, 2, 3])
         # Training like encoding -- all categories in matrix
-        X_ohe = MERFDataGenerator.ohe_clusters(
+        X_ohe = DummeDataGenerator.ohe_clusters(
             pd.Series([0, 0, 1, 2, 2, 2, 3]), training_cluster_ids=training_cluster_ids
         )
         # check columns and sums
@@ -77,13 +77,13 @@ class DataGenerationTest(unittest.TestCase):
         self.assertListEqual(X_ohe.sum().tolist(), [2, 1, 3, 1])
 
         # New encoding -- no categories in matrix
-        X_ohe = MERFDataGenerator.ohe_clusters(pd.Series([4, 4, 5, 6, 6, 7]), training_cluster_ids=training_cluster_ids)
+        X_ohe = DummeDataGenerator.ohe_clusters(pd.Series([4, 4, 5, 6, 6, 7]), training_cluster_ids=training_cluster_ids)
         # check columns and sums
         self.assertListEqual(X_ohe.columns.tolist(), ["cluster_0", "cluster_1", "cluster_2", "cluster_3"])
         self.assertListEqual(X_ohe.sum().tolist(), [0, 0, 0, 0])
 
         # Mixed encoding -- some categories in matrix
-        X_ohe = MERFDataGenerator.ohe_clusters(
+        X_ohe = DummeDataGenerator.ohe_clusters(
             pd.Series([1, 1, 3, 0, 0, 4, 5, 6, 6, 7]), training_cluster_ids=training_cluster_ids
         )
         # check columns and sums
@@ -95,7 +95,7 @@ class MERFTest(unittest.TestCase):
     def setUp(self):
         np.random.seed(3187)
 
-        dg = MERFDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
+        dg = DummeDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
         train, test_known, test_new, train_cluster_ids, ptev, prev = dg.generate_split_samples([1, 3], [3, 2], [1, 1])
 
         self.X_train = train
@@ -242,7 +242,7 @@ class MerfInputTests(unittest.TestCase):
         6   0.303006  1.329137 -1.041186  1.0        1
 
         """
-        dg = MERFDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
+        dg = DummeDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
         X, _, _, _, _, _ = dg.generate_split_samples([1, 3], [3, 2], [1, 1])
         self.X = X.drop("y", axis=1)
 

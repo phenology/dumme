@@ -9,7 +9,7 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-class MERFDataGenerator(object):
+class DummeDataGenerator(object):
     """
     Synthetic data generator class. It simulates samples y from K clusters according to the following equation.
 
@@ -71,7 +71,7 @@ class MERFDataGenerator(object):
         Returns:
             pd.DataFrame: X augmented with one hot encoded clusters
         """
-        X_ohe = MERFDataGenerator.ohe_clusters(clusters, training_cluster_ids)
+        X_ohe = DummeDataGenerator.ohe_clusters(clusters, training_cluster_ids)
         X_w_ohe = pd.merge(X, X_ohe, left_index=True, right_index=True)
         return X_w_ohe
 

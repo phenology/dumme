@@ -8,9 +8,8 @@ import numpy as np
 from pycaret.regression import RegressionExperiment
 from sklearn.svm import LinearSVC
 from sklearn.utils.estimator_checks import check_estimator
-from utils import MERFDataGenerator
-
-from merf import MixedEffectsModel
+from dumme.utils import DummeDataGenerator
+from dumme.core import MixedEffectsModel
 
 
 class TestSklearnCompliance(unittest.TestCase):
@@ -44,7 +43,7 @@ class TestSklearnCompliance(unittest.TestCase):
         """Check if can be used with pycaret."""
         np.random.seed(3187)
 
-        dg = MERFDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
+        dg = DummeDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
         train, _, _, _, _, _ = dg.generate_split_samples([1, 3], [3, 2], [1, 1])
 
         X_train = train.drop("y", axis=1)

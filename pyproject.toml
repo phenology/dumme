@@ -1,18 +1,39 @@
-[tool.black]
-line-length = 120
-target-version = ['py37']
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dumme"
+version = "1.0.1"
+dependencies = [
+  "pandas>=1.0",
+  "numpy>=1.20",
+  "scikit-learn",
+  "matplotlib>=3.0",
+  "lightgbm",
+]
+description="Mixed Effects Model"
+readme="README.md"
+requires-python = '>=3.9'
+authors = [
+  {name = "Manifold, Inc.", email = "sdey@manifold.ai"},
+  {name = "Peter Kalverla.", email = "p.kalverla@esciencecenter.nl"},
+]
+license = {file = "LICENSE.txt"}
+keywords=["random forest", "machine learning", "mixed effects"]
+classifiers=[
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.optional-dependencies]
+dev = ["black", "ruff", "isort", "pycaret"]
+
+[project.urls]
+Repository="https://github.com/phenology/merf"
+Original="https://github.com/manifoldai/merf"
+
+[tool.isort]
+profile = "black"
