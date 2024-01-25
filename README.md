@@ -17,7 +17,7 @@ This is an adaptation of https://github.com/manifoldai/merf. The most important 
 
 > [!CAUTION]
 > We don't intend to maintain or develop this further. However, we are happy to
-> contribute our changes could be ported to the original verison of the code.
+> contribute our changes to the original version of MERF.
 > Notice https://github.com/manifoldai/merf/issues/68.
 
 ## Using this version
