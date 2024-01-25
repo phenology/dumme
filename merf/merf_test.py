@@ -17,8 +17,9 @@ from numpy.testing import assert_almost_equal
 from sklearn.exceptions import NotFittedError
 from utils import MERFDataGenerator
 from viz import plot_merf_training_stats
+from sklearn.ensemble import RandomForestRegressor
 
-from merf import MERF
+from merf import MixedEffectsModel
 
 
 class DataGenerationTest(unittest.TestCase):
@@ -115,12 +116,12 @@ class MERFTest(unittest.TestCase):
         self.y_new = test_new.pop("y")
 
     def test_not_fitted_error(self):
-        m = MERF()
+        m = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1))
         with self.assertRaises(NotFittedError):
             m.predict(self.X_known)
 
     def test_fit_and_predict_pandas(self):
-        m = MERF(max_iterations=5)
+        m = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=5)
         # Train
         m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         self.assertEqual(len(m.gll_history_), 5)
@@ -133,7 +134,7 @@ class MERFTest(unittest.TestCase):
         self.assertEqual(len(yhat_new), 2)
 
     def test_fit_and_predict_numpy(self):
-        m = MERF(max_iterations=5)
+        m = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=5)
         # Train
         m.fit(np.array(self.X_train), np.array(self.y_train), **self.fit_kwargs_numpy)
         self.assertEqual(len(m.val_loss_history_), 0)
@@ -147,14 +148,14 @@ class MERFTest(unittest.TestCase):
     def test_early_stopping(self):
         np.random.seed(3187)
         # Create a MERF model with a high early stopping threshold
-        m = MERF(max_iterations=5, gll_early_stop_threshold=0.1)
+        m = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=5, gll_early_stop_threshold=0.1)
         # Fit
         m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         # The number of iterations should be less than max_iterations
         self.assertTrue(len(m.gll_history_) < 5)
 
     def test_pickle(self):
-        m = MERF(max_iterations=5)
+        m = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=5)
         # Train
         m.fit(self.X_train, self.y_train, **self.fit_kwargs)
 
@@ -178,8 +179,7 @@ class MERFTest(unittest.TestCase):
         assert_almost_equal(yhat_new_pkl, yhat_new)
 
     def test_user_defined_fe_model(self):
-        lgbm = LGBMRegressor
-        m = MERF(fixed_effects_model=lgbm, max_iterations=5)
+        m = MixedEffectsModel(LGBMRegressor(), max_iterations=5)
         # Train
         m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         self.assertEqual(len(m.gll_history_), 5)
@@ -191,8 +191,7 @@ class MERFTest(unittest.TestCase):
         self.assertEqual(len(yhat_new), 2)
 
     def test_validation(self):
-        lgbm = LGBMRegressor
-        m = MERF(fixed_effects_model=lgbm, max_iterations=5)
+        m = MixedEffectsModel(LGBMRegressor(), max_iterations=5)
         # Train
         m.fit(self.X_train, self.y_train, **self.fit_kwargs, X_val=self.X_known, y_val=self.y_known)
         self.assertEqual(len(m.val_loss_history_), 5)
@@ -204,7 +203,7 @@ class MERFTest(unittest.TestCase):
         self.assertEqual(len(yhat_new), 2)
 
     def test_validation_numpy(self):
-        m = MERF(max_iterations=3)
+        m = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=3)
         # Train
         m.fit(
             np.array(self.X_train),
@@ -222,8 +221,7 @@ class MERFTest(unittest.TestCase):
         self.assertEqual(len(yhat_new), 2)
 
     def test_viz(self):
-        lgbm = LGBMRegressor
-        m = MERF(fixed_effects_model=lgbm, max_iterations=5)
+        m = MixedEffectsModel(LGBMRegressor(), max_iterations=5)
         # Train
         m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         plot_merf_training_stats(m)
@@ -249,7 +247,7 @@ class MerfInputTests(unittest.TestCase):
         self.X = X.drop("y", axis=1)
 
     def assert_valid_fit_input(self, X, *args, **kwargs):
-        merf = MERF()
+        merf = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1))
         merf._parse_fit_kwargs(X, *args, **kwargs)
 
         expected_cluster_column = 4
@@ -261,7 +259,7 @@ class MerfInputTests(unittest.TestCase):
         assert merf.random_effects_ == expected_random_effects
 
     def assert_invalid_fit_input(self, X, *args, **kwargs):
-        merf = MERF()
+        merf = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1))
         with self.assertRaises(ValueError):
             merf._parse_fit_kwargs(X, *args, **kwargs)
 

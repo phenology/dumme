@@ -10,7 +10,7 @@ from sklearn.svm import LinearSVC
 from sklearn.utils.estimator_checks import check_estimator
 from utils import MERFDataGenerator
 
-from merf.meebm import MERF
+from merf import MixedEffectsModel
 
 
 class TestSklearnCompliance(unittest.TestCase):
@@ -25,7 +25,7 @@ class TestSklearnCompliance(unittest.TestCase):
             "check_dtype_object",  # Requires moving fe model out of constructor
         ]
 
-        checks = check_estimator(MERF(), generate_only=True)
+        checks = check_estimator(MixedEffectsModel(), generate_only=True)
         for estimator, check in checks:
             name = check.func.__name__
             with self.subTest(check=name):
@@ -52,13 +52,13 @@ class TestSklearnCompliance(unittest.TestCase):
         fit_kwargs = dict(cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"])
 
         # Ensure it works as standalone
-        m = MERF(max_iterations=5)
+        m = MixedEffectsModel(max_iterations=5)
         m.fit(X_train, y_train, **fit_kwargs)
 
         # Now with pycaret
         exp = RegressionExperiment()
         exp.setup(data=train, target="y")
-        exp.create_model(MERF(max_iterations=5), fit_kwargs=fit_kwargs, cross_validation=False)
+        exp.create_model(MixedEffectsModel(max_iterations=5), fit_kwargs=fit_kwargs, cross_validation=False)
 
 
 if __name__ == "__main__":

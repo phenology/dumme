@@ -1,5 +1,5 @@
 """
-Mixed Effects Random Forest model.
+Mixed Effects Model.
 """
 import logging
 from typing import Union
@@ -9,6 +9,7 @@ import pandas as pd
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, RegressorMixin, check_array, check_is_fitted
 from sklearn.utils import check_X_y
+from sklearn.dummy import DummyRegressor
 
 logger = logging.getLogger(__name__)
 
@@ -43,18 +44,13 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
 
     def __init__(
         self,
+        fe_model = DummyRegressor(),
         gll_early_stop_threshold=None,
         max_iterations=20,
-        **fe_kwargs,
     ):
+        self.fe_model = fe_model
         self.gll_early_stop_threshold = gll_early_stop_threshold
         self.max_iterations = max_iterations
-        self.fe_kwargs = fe_kwargs
-
-    @property
-    def fixed_effects_model(self):
-        # TODO by default run a linear model?
-        raise NotImplementedError()
 
     def predict(self, X: ArrayLike):
         """
@@ -100,7 +96,7 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
         self,
         X: ArrayLike,
         y: ArrayLike,
-        cluster_column: Union[int, str] = -1,
+        cluster_column: Union[int, str] = 0,
         fixed_effects: Union[int, str, list[int], list[str]] = [],
         random_effects: Union[int, str, list[int], list[str]] = [],
         X_val: ArrayLike = None,
@@ -128,7 +124,6 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
         Returns:
             MERF: fitted model
         """
-
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Parse Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         check_X_y(X, y)  # First check, then parse columns, then overwrite X and y
         self._parse_fit_kwargs(X, cluster_column, fixed_effects, random_effects)
@@ -154,6 +149,8 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
         n_obs = len(y)
         q = Z.shape[1]  # random effects dimension
         Z = np.array(Z)  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
+
+        logger.warning(f"{n_clusters=}, performance scales with number of clusters.")
 
         # Create a series where cluster_id is the index and n_i is the value
         self.cluster_counts_ = clusters.value_counts()
@@ -221,7 +218,7 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
             assert len(y_star.shape) == 1
 
             # Do the fixed effects regression with all the fixed effects features
-            self.trained_fe_model_ = self.fixed_effects_model.fit(X, y_star)
+            self.trained_fe_model_ = self.fe_model.fit(X, y_star)
             f_hat = self.trained_fe_model_.predict(X)
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ M-step ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -362,7 +359,7 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
     def _parse_fit_kwargs(
         self,
         X,
-        cluster_column: Union[int, str] = -1,
+        cluster_column: Union[int, str] = 0,
         fixed_effects: Union[int, str, list[int], list[str]] = [],
         random_effects: Union[int, str, list[int], list[str]] = [],
     ):
