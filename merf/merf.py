@@ -1,5 +1,5 @@
 """
-Mixed Effects Random Forest model.
+Mixed Effects Model.
 """
 import logging
 from typing import Union
@@ -8,19 +8,15 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, RegressorMixin, check_array, check_is_fitted
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.utils import check_X_y
+from sklearn.dummy import DummyRegressor
 
 logger = logging.getLogger(__name__)
 
 
-def model_builder():
-    return RandomForestRegressor(n_estimators=300, n_jobs=-1)
-
-
 # BaseEstimator has boilerplate for things like get_params, set_params
 # RegressorMixin adds attribute `_estimator_type = "regressor` and `score` method
-class MERF(BaseEstimator, RegressorMixin):
+class MixedEffectsModel(BaseEstimator, RegressorMixin):
     """
     This is the core class to instantiate, train, and predict using a mixed effects random forest model.
     It roughly adheres to the sklearn estimator API.
@@ -41,20 +37,18 @@ class MERF(BaseEstimator, RegressorMixin):
     * i is the cluster index. Assume k clusters in the training.
     * bi is the random effect coefficients. They are different per cluster i but are assumed to be drawn from the same distribution ~N(0, Sigma_b) where Sigma_b is learned from the data.
 
-
     Args:
-        fixed_effects_model (sklearn.base.RegressorMixin): function that will return an instantiated model
         gll_early_stop_threshold (float): early stopping threshold on GLL improvement
         max_iterations (int): maximum number of EM iterations to train
     """
 
     def __init__(
         self,
-        fixed_effects_model=model_builder,
+        fe_model = DummyRegressor(),
         gll_early_stop_threshold=None,
         max_iterations=20,
     ):
-        self.fixed_effects_model = fixed_effects_model
+        self.fe_model = fe_model
         self.gll_early_stop_threshold = gll_early_stop_threshold
         self.max_iterations = max_iterations
 
@@ -102,7 +96,7 @@ class MERF(BaseEstimator, RegressorMixin):
         self,
         X: ArrayLike,
         y: ArrayLike,
-        cluster_column: Union[int, str] = -1,
+        cluster_column: Union[int, str] = 0,
         fixed_effects: Union[int, str, list[int], list[str]] = [],
         random_effects: Union[int, str, list[int], list[str]] = [],
         X_val: ArrayLike = None,
@@ -130,7 +124,6 @@ class MERF(BaseEstimator, RegressorMixin):
         Returns:
             MERF: fitted model
         """
-
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Parse Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         check_X_y(X, y)  # First check, then parse columns, then overwrite X and y
         self._parse_fit_kwargs(X, cluster_column, fixed_effects, random_effects)
@@ -156,6 +149,8 @@ class MERF(BaseEstimator, RegressorMixin):
         n_obs = len(y)
         q = Z.shape[1]  # random effects dimension
         Z = np.array(Z)  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
+
+        logger.warning(f"{n_clusters=}, performance scales with number of clusters.")
 
         # Create a series where cluster_id is the index and n_i is the value
         self.cluster_counts_ = clusters.value_counts()
@@ -223,7 +218,7 @@ class MERF(BaseEstimator, RegressorMixin):
             assert len(y_star.shape) == 1
 
             # Do the fixed effects regression with all the fixed effects features
-            self.trained_fe_model_ = self.fixed_effects_model().fit(X, y_star)
+            self.trained_fe_model_ = self.fe_model.fit(X, y_star)
             f_hat = self.trained_fe_model_.predict(X)
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ M-step ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -364,7 +359,7 @@ class MERF(BaseEstimator, RegressorMixin):
     def _parse_fit_kwargs(
         self,
         X,
-        cluster_column: Union[int, str] = -1,
+        cluster_column: Union[int, str] = 0,
         fixed_effects: Union[int, str, list[int], list[str]] = [],
         random_effects: Union[int, str, list[int], list[str]] = [],
     ):
