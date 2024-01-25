@@ -98,7 +98,7 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
         self,
         X: ArrayLike,
         y: ArrayLike,
-        cluster_column: Union[int, str] = 0,
+        cluster_column: Union[int, str] = -1,
         fixed_effects: Union[int, str, list[int], list[str]] = [],
         random_effects: Union[int, str, list[int], list[str]] = [],
         X_val: ArrayLike = None,
@@ -111,7 +111,7 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
             X: predictors (both fixed and random effect covariates)
             y: response/target variable
             cluster_column: name or index of column in X that contains cluster
-                assignments. Default is first column.
+                assignments. Default is last column.
             fixed_effects: columns (names or indices) to use as fixed effects.
                 If not specified, all columns except for those designated as cluster
                 or random effects are used.
@@ -389,7 +389,7 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
     def _parse_fit_kwargs(
         self,
         X,
-        cluster_column: Union[int, str] = 0,
+        cluster_column: Union[int, str] = -1,
         fixed_effects: Union[int, str, list[int], list[str]] = [],
         random_effects: Union[int, str, list[int], list[str]] = [],
     ):

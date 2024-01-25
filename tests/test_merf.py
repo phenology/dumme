@@ -305,7 +305,7 @@ class TestDummeInput(unittest.TestCase):
         merf = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1))
         merf._parse_fit_kwargs(X, *args, **kwargs)
 
-        expected_cluster_column = 0
+        expected_cluster_column = 4
         expected_random_effects = [3] if "random_effects" in kwargs else []
         expected_fixed_effects = (
             [0, 1, 2]
