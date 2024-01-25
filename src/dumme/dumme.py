@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
 from sklearn.base import BaseEstimator, RegressorMixin, check_array, check_is_fitted
-from sklearn.utils import check_X_y
 from sklearn.dummy import DummyRegressor
+from sklearn.utils import check_X_y
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
 
     def __init__(
         self,
-        fe_model = DummyRegressor(),
+        fe_model=DummyRegressor(),
         gll_early_stop_threshold=None,
         max_iterations=20,
     ):
@@ -71,7 +71,9 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
         X = check_array(X)
 
         X, clusters, Z = self._split_X_input(X)
-        Z = np.array(Z)  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
+        Z = np.array(
+            Z
+        )  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
 
         # Apply fixed effects model to all
         y_hat = self.trained_fe_model_.predict(X)
@@ -148,7 +150,9 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
         n_clusters = clusters.nunique()
         n_obs = len(y)
         q = Z.shape[1]  # random effects dimension
-        Z = np.array(Z)  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
+        Z = np.array(
+            Z
+        )  # cast Z to numpy array (required if it's a dataframe, otw, the matrix mults later fail)
 
         logger.warning(f"{n_clusters=}, performance scales with number of clusters.")
 
@@ -181,7 +185,9 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
         # Note we are using a dataframe to hold the b_hat because this is easier to index into by cluster_id
         # Before we were using a simple numpy array -- but we were indexing into that wrong because the cluster_ids
         # are not necessarily in order.
-        b_hat_df = pd.DataFrame(np.zeros((n_clusters, q)), index=self.cluster_counts_.index)
+        b_hat_df = pd.DataFrame(
+            np.zeros((n_clusters, q)), index=self.cluster_counts_.index
+        )
         sigma2_hat = 1
         D_hat = np.eye(q)
 
@@ -206,7 +212,9 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
                 y_i = y_by_cluster[cluster_id]
                 Z_i = Z_by_cluster[cluster_id]
                 b_hat_i = b_hat_df.loc[cluster_id]  # used to be ix
-                logger.debug("E-step, cluster {}, b_hat = {}".format(cluster_id, b_hat_i))
+                logger.debug(
+                    "E-step, cluster {}, b_hat = {}".format(cluster_id, b_hat_i)
+                )
                 indices_i = indices_by_cluster[cluster_id]
 
                 # Compute y_star for this cluster and put back in right place
@@ -241,16 +249,26 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
 
                 # Compute b_hat_i
                 V_hat_inv_i = np.linalg.pinv(V_hat_i)
-                logger.debug("M-step, pre-update, cluster {}, b_hat = {}".format(cluster_id, b_hat_df.loc[cluster_id]))
+                logger.debug(
+                    "M-step, pre-update, cluster {}, b_hat = {}".format(
+                        cluster_id, b_hat_df.loc[cluster_id]
+                    )
+                )
                 b_hat_i = D_hat.dot(Z_i.T).dot(V_hat_inv_i).dot(y_i - f_hat_i)
-                logger.debug("M-step, post-update, cluster {}, b_hat = {}".format(cluster_id, b_hat_i))
+                logger.debug(
+                    "M-step, post-update, cluster {}, b_hat = {}".format(
+                        cluster_id, b_hat_i
+                    )
+                )
 
                 # Compute the total error for this cluster
                 eps_hat_i = y_i - f_hat_i - Z_i.dot(b_hat_i)
 
                 logger.debug("------------------------------------------")
                 logger.debug("M-step, cluster {}".format(cluster_id))
-                logger.debug("error squared for cluster = {}".format(eps_hat_i.T.dot(eps_hat_i)))
+                logger.debug(
+                    "error squared for cluster = {}".format(eps_hat_i.T.dot(eps_hat_i))
+                )
 
                 # Store b_hat for cluster both in numpy array and in dataframe
                 # Note this HAS to be assigned with loc, otw whole df get erroneously assigned and things go to hell
@@ -261,7 +279,9 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
                 )
 
                 # Update the sums for sigma2_hat and D_hat. We will update after the entire loop over clusters
-                sigma2_hat_sum += eps_hat_i.T.dot(eps_hat_i) + sigma2_hat * (n_i - sigma2_hat * np.trace(V_hat_inv_i))
+                sigma2_hat_sum += eps_hat_i.T.dot(eps_hat_i) + sigma2_hat * (
+                    n_i - sigma2_hat * np.trace(V_hat_inv_i)
+                )
                 D_hat_sum += np.outer(b_hat_i, b_hat_i) + (
                     D_hat - D_hat.dot(Z_i.T).dot(V_hat_inv_i).dot(Z_i).dot(D_hat)
                 )  # noqa: E127
@@ -315,18 +335,26 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
             # Early Stopping. This code is entered only if the early stop threshold is specified and
             # if the gll_history array is longer than 1 element, e.g. we are past the first iteration.
             if self.gll_early_stop_threshold is not None and len(self.gll_history_) > 1:
-                curr_threshold = np.abs((gll - self.gll_history_[-2]) / self.gll_history_[-2])
+                curr_threshold = np.abs(
+                    (gll - self.gll_history_[-2]) / self.gll_history_[-2]
+                )
                 logger.debug("stop threshold = {}".format(curr_threshold))
 
                 if curr_threshold < self.gll_early_stop_threshold:
-                    logger.info("Gll {} less than threshold {}, stopping early ...".format(gll, curr_threshold))
+                    logger.info(
+                        "Gll {} less than threshold {}, stopping early ...".format(
+                            gll, curr_threshold
+                        )
+                    )
                     early_stop_flag = True
 
             # Compute Validation Loss
             if X_val is not None:
                 yhat_val = self.predict(X_val)
                 val_loss = np.square(np.subtract(y_val, yhat_val)).mean()
-                logger.info(f"Validation MSE Loss is {val_loss} at iteration {iteration}.")
+                logger.info(
+                    f"Validation MSE Loss is {val_loss} at iteration {iteration}."
+                )
                 self.val_loss_history_.append(val_loss)
 
         return self
@@ -350,7 +378,9 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
         # Step 2 - Create the multi-index. Note the outer index is iteration. The inner index is cluster.
         iterations = range(len(self.b_hat_history_))
         clusters = self.b_hat_history_[0].index
-        mi = pd.MultiIndex.from_product([iterations, clusters], names=("iteration", "cluster"))
+        mi = pd.MultiIndex.from_product(
+            [iterations, clusters], names=("iteration", "cluster")
+        )
 
         # Step 3 - Create the multi-indexed dataframe
         b_hat_history_df = pd.DataFrame(b_array, index=mi)
@@ -375,11 +405,14 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
 
             if random_effects:
                 if all([isinstance(name, str) for name in random_effects]):
-                    random_effects = [X.columns.get_loc(name) for name in random_effects]
+                    random_effects = [
+                        X.columns.get_loc(name) for name in random_effects
+                    ]
 
                 elif not all([isinstance(item, int) for item in random_effects]):
                     raise ValueError(
-                        "Got mixed input for random_effects." "Provide a list of only integers or only strings."
+                        "Got mixed input for random_effects."
+                        "Provide a list of only integers or only strings."
                     )
 
             if fixed_effects:
@@ -388,7 +421,8 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
 
                 elif not all([isinstance(item, int) for item in fixed_effects]):
                     raise ValueError(
-                        "Got mixed input for fixed_effects." "Provide a list of only integers or only strings."
+                        "Got mixed input for fixed_effects."
+                        "Provide a list of only integers or only strings."
                     )
 
         # Now everything should be integers
@@ -409,7 +443,11 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
         cluster_column %= ncols  # that way -1 also works
 
         if not fixed_effects:
-            fixed_effects = [i for i in range(ncols) if i not in random_effects and i != cluster_column]
+            fixed_effects = [
+                i
+                for i in range(ncols)
+                if i not in random_effects and i != cluster_column
+            ]
 
         self.cluster_column_ = cluster_column
         self.random_effects_ = random_effects

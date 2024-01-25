@@ -14,11 +14,11 @@ import numpy as np
 import pandas as pd
 from lightgbm import LGBMRegressor
 from numpy.testing import assert_almost_equal
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.exceptions import NotFittedError
+
 from dumme.utils import DummeDataGenerator
 from dumme.viz import plot_merf_training_stats
-from sklearn.ensemble import RandomForestRegressor
-
 from merf import MixedEffectsModel
 
 
@@ -34,7 +34,9 @@ class DataGenerationTest(unittest.TestCase):
         dg = DummeDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
         df, ptev, prev = dg.generate_samples([1, 2, 3])
         # check columns
-        self.assertListEqual(df.columns.tolist(), ["y", "X_0", "X_1", "X_2", "Z", "cluster"])
+        self.assertListEqual(
+            df.columns.tolist(), ["y", "X_0", "X_1", "X_2", "Z", "cluster"]
+        )
         # check length
         self.assertEqual(len(df), 6)
         # check cluster sizes
@@ -44,11 +46,24 @@ class DataGenerationTest(unittest.TestCase):
 
     def test_generate_split_samples(self):
         dg = DummeDataGenerator(m=0.7, sigma_b=2.7, sigma_e=1)
-        train, test_known, test_new, training_ids, ptev, prev = dg.generate_split_samples([1, 3], [3, 2], [1, 1])
+        (
+            train,
+            test_known,
+            test_new,
+            training_ids,
+            ptev,
+            prev,
+        ) = dg.generate_split_samples([1, 3], [3, 2], [1, 1])
         # check all have same columns
-        self.assertListEqual(train.columns.tolist(), ["y", "X_0", "X_1", "X_2", "Z", "cluster"])
-        self.assertListEqual(test_known.columns.tolist(), ["y", "X_0", "X_1", "X_2", "Z", "cluster"])
-        self.assertListEqual(test_new.columns.tolist(), ["y", "X_0", "X_1", "X_2", "Z", "cluster"])
+        self.assertListEqual(
+            train.columns.tolist(), ["y", "X_0", "X_1", "X_2", "Z", "cluster"]
+        )
+        self.assertListEqual(
+            test_known.columns.tolist(), ["y", "X_0", "X_1", "X_2", "Z", "cluster"]
+        )
+        self.assertListEqual(
+            test_new.columns.tolist(), ["y", "X_0", "X_1", "X_2", "Z", "cluster"]
+        )
 
         # check length
         self.assertEqual(len(train), 4)
@@ -73,21 +88,30 @@ class DataGenerationTest(unittest.TestCase):
             pd.Series([0, 0, 1, 2, 2, 2, 3]), training_cluster_ids=training_cluster_ids
         )
         # check columns and sums
-        self.assertListEqual(X_ohe.columns.tolist(), ["cluster_0", "cluster_1", "cluster_2", "cluster_3"])
+        self.assertListEqual(
+            X_ohe.columns.tolist(), ["cluster_0", "cluster_1", "cluster_2", "cluster_3"]
+        )
         self.assertListEqual(X_ohe.sum().tolist(), [2, 1, 3, 1])
 
         # New encoding -- no categories in matrix
-        X_ohe = DummeDataGenerator.ohe_clusters(pd.Series([4, 4, 5, 6, 6, 7]), training_cluster_ids=training_cluster_ids)
+        X_ohe = DummeDataGenerator.ohe_clusters(
+            pd.Series([4, 4, 5, 6, 6, 7]), training_cluster_ids=training_cluster_ids
+        )
         # check columns and sums
-        self.assertListEqual(X_ohe.columns.tolist(), ["cluster_0", "cluster_1", "cluster_2", "cluster_3"])
+        self.assertListEqual(
+            X_ohe.columns.tolist(), ["cluster_0", "cluster_1", "cluster_2", "cluster_3"]
+        )
         self.assertListEqual(X_ohe.sum().tolist(), [0, 0, 0, 0])
 
         # Mixed encoding -- some categories in matrix
         X_ohe = DummeDataGenerator.ohe_clusters(
-            pd.Series([1, 1, 3, 0, 0, 4, 5, 6, 6, 7]), training_cluster_ids=training_cluster_ids
+            pd.Series([1, 1, 3, 0, 0, 4, 5, 6, 6, 7]),
+            training_cluster_ids=training_cluster_ids,
         )
         # check columns and sums
-        self.assertListEqual(X_ohe.columns.tolist(), ["cluster_0", "cluster_1", "cluster_2", "cluster_3"])
+        self.assertListEqual(
+            X_ohe.columns.tolist(), ["cluster_0", "cluster_1", "cluster_2", "cluster_3"]
+        )
         self.assertListEqual(X_ohe.sum().tolist(), [2, 2, 0, 1])
 
 
@@ -96,7 +120,14 @@ class MERFTest(unittest.TestCase):
         np.random.seed(3187)
 
         dg = DummeDataGenerator(m=0.6, sigma_b=4.5, sigma_e=1)
-        train, test_known, test_new, train_cluster_ids, ptev, prev = dg.generate_split_samples([1, 3], [3, 2], [1, 1])
+        (
+            train,
+            test_known,
+            test_new,
+            train_cluster_ids,
+            ptev,
+            prev,
+        ) = dg.generate_split_samples([1, 3], [3, 2], [1, 1])
 
         self.X_train = train
         self.y_train = train.pop("y")
@@ -104,10 +135,14 @@ class MERFTest(unittest.TestCase):
         self.fixed_effects = ["X_0", "X_1", "X_2"]
         self.random_effects = ["Z"]
         self.fit_kwargs = dict(
-            cluster_column=self.cluster_column, fixed_effects=self.fixed_effects, random_effects=self.random_effects
+            cluster_column=self.cluster_column,
+            fixed_effects=self.fixed_effects,
+            random_effects=self.random_effects,
         )
 
-        self.fit_kwargs_numpy = dict(cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3])
+        self.fit_kwargs_numpy = dict(
+            cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3]
+        )
 
         self.X_known = test_known
         self.y_known = test_known.pop("y")
@@ -121,7 +156,9 @@ class MERFTest(unittest.TestCase):
             m.predict(self.X_known)
 
     def test_fit_and_predict_pandas(self):
-        m = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=5)
+        m = MixedEffectsModel(
+            RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=5
+        )
         # Train
         m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         self.assertEqual(len(m.gll_history_), 5)
@@ -134,7 +171,9 @@ class MERFTest(unittest.TestCase):
         self.assertEqual(len(yhat_new), 2)
 
     def test_fit_and_predict_numpy(self):
-        m = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=5)
+        m = MixedEffectsModel(
+            RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=5
+        )
         # Train
         m.fit(np.array(self.X_train), np.array(self.y_train), **self.fit_kwargs_numpy)
         self.assertEqual(len(m.val_loss_history_), 0)
@@ -148,14 +187,20 @@ class MERFTest(unittest.TestCase):
     def test_early_stopping(self):
         np.random.seed(3187)
         # Create a MERF model with a high early stopping threshold
-        m = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=5, gll_early_stop_threshold=0.1)
+        m = MixedEffectsModel(
+            RandomForestRegressor(n_estimators=300, n_jobs=-1),
+            max_iterations=5,
+            gll_early_stop_threshold=0.1,
+        )
         # Fit
         m.fit(self.X_train, self.y_train, **self.fit_kwargs)
         # The number of iterations should be less than max_iterations
         self.assertTrue(len(m.gll_history_) < 5)
 
     def test_pickle(self):
-        m = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=5)
+        m = MixedEffectsModel(
+            RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=5
+        )
         # Train
         m.fit(self.X_train, self.y_train, **self.fit_kwargs)
 
@@ -193,7 +238,13 @@ class MERFTest(unittest.TestCase):
     def test_validation(self):
         m = MixedEffectsModel(LGBMRegressor(), max_iterations=5)
         # Train
-        m.fit(self.X_train, self.y_train, **self.fit_kwargs, X_val=self.X_known, y_val=self.y_known)
+        m.fit(
+            self.X_train,
+            self.y_train,
+            **self.fit_kwargs,
+            X_val=self.X_known,
+            y_val=self.y_known,
+        )
         self.assertEqual(len(m.val_loss_history_), 5)
         # Predict Known Clusters
         yhat_known = m.predict(self.X_known)
@@ -203,7 +254,9 @@ class MERFTest(unittest.TestCase):
         self.assertEqual(len(yhat_new), 2)
 
     def test_validation_numpy(self):
-        m = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=3)
+        m = MixedEffectsModel(
+            RandomForestRegressor(n_estimators=300, n_jobs=-1), max_iterations=3
+        )
         # Train
         m.fit(
             np.array(self.X_train),
@@ -252,7 +305,11 @@ class MerfInputTests(unittest.TestCase):
 
         expected_cluster_column = 4
         expected_random_effects = [3] if "random_effects" in kwargs else []
-        expected_fixed_effects = [0, 1, 2] if "random_effects" in kwargs or "fixed_effects" in kwargs else [0, 1, 2, 3]
+        expected_fixed_effects = (
+            [0, 1, 2]
+            if "random_effects" in kwargs or "fixed_effects" in kwargs
+            else [0, 1, 2, 3]
+        )
 
         assert merf.cluster_column_ == expected_cluster_column
         assert merf.fixed_effects_ == expected_fixed_effects
@@ -272,7 +329,12 @@ class MerfInputTests(unittest.TestCase):
             dict(X=X, cluster_column="cluster"),
             dict(X=X, cluster_column="cluster", random_effects=["Z"]),
             dict(X=X, cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"]),
-            dict(X=X, cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(
+                X=X,
+                cluster_column="cluster",
+                fixed_effects=["X_0", "X_1", "X_2"],
+                random_effects=["Z"],
+            ),
             dict(X=X, fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
             dict(X=X, fixed_effects=["X_0", "X_1", "X_2"]),
             dict(X=X, random_effects=["Z"]),
@@ -281,7 +343,12 @@ class MerfInputTests(unittest.TestCase):
             dict(X=np.array(X), cluster_column=4),
             dict(X=np.array(X), cluster_column=4, random_effects=[3]),
             dict(X=np.array(X), cluster_column=4, fixed_effects=[0, 1, 2]),
-            dict(X=np.array(X), cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(
+                X=np.array(X),
+                cluster_column=4,
+                fixed_effects=[0, 1, 2],
+                random_effects=[3],
+            ),
             dict(X=np.array(X), fixed_effects=[0, 1, 2], random_effects=[3]),
             dict(X=np.array(X), fixed_effects=[0, 1, 2]),
             dict(X=np.array(X), random_effects=[3]),
@@ -290,7 +357,12 @@ class MerfInputTests(unittest.TestCase):
             dict(X=np.array(X).tolist(), cluster_column=4),
             dict(X=np.array(X).tolist(), cluster_column=4, random_effects=[3]),
             dict(X=np.array(X).tolist(), cluster_column=4, fixed_effects=[0, 1, 2]),
-            dict(X=np.array(X).tolist(), cluster_column=4, fixed_effects=[0, 1, 2], random_effects=[3]),
+            dict(
+                X=np.array(X).tolist(),
+                cluster_column=4,
+                fixed_effects=[0, 1, 2],
+                random_effects=[3],
+            ),
             dict(X=np.array(X).tolist(), fixed_effects=[0, 1, 2], random_effects=[3]),
             dict(X=np.array(X).tolist(), fixed_effects=[0, 1, 2]),
             dict(X=np.array(X).tolist(), random_effects=[3]),
@@ -308,7 +380,12 @@ class MerfInputTests(unittest.TestCase):
             dict(X=X, cluster_column=4),
             dict(X=X, cluster_column=4, random_effects=["Z"]),
             dict(X=X, cluster_column="cluster", fixed_effects=[0, 1, 2]),
-            dict(X=X, cluster_column=4, fixed_effects=["X_0", "X_1", "X_2"], random_effects=[3]),
+            dict(
+                X=X,
+                cluster_column=4,
+                fixed_effects=["X_0", "X_1", "X_2"],
+                random_effects=[3],
+            ),
             dict(X=X, fixed_effects=[0, 1, 2], random_effects=[3]),
             dict(X=X, fixed_effects=["X_0", "X_1", "X_2"]),
             dict(X=X, random_effects=["Z"]),
@@ -322,22 +399,43 @@ class MerfInputTests(unittest.TestCase):
             # Invalid: numpy array with strings as column indices
             dict(X=np.array(X), cluster_column="cluster"),
             dict(X=np.array(X), cluster_column="cluster", random_effects=["Z"]),
-            dict(X=np.array(X), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"]),
-            dict(X=np.array(X), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
-            dict(X=np.array(X), fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(
+                X=np.array(X),
+                cluster_column="cluster",
+                fixed_effects=["X_0", "X_1", "X_2"],
+            ),
+            dict(
+                X=np.array(X),
+                cluster_column="cluster",
+                fixed_effects=["X_0", "X_1", "X_2"],
+                random_effects=["Z"],
+            ),
+            dict(
+                X=np.array(X), fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]
+            ),
             dict(X=np.array(X), fixed_effects=["X_0", "X_1", "X_2"]),
             dict(X=np.array(X), random_effects=["Z"]),
             # Invalid: nested list with strings as column indices
             dict(X=np.array(X).tolist(), cluster_column="cluster"),
-            dict(X=np.array(X).tolist(), cluster_column="cluster", random_effects=["Z"]),
-            dict(X=np.array(X).tolist(), cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"]),
+            dict(
+                X=np.array(X).tolist(), cluster_column="cluster", random_effects=["Z"]
+            ),
+            dict(
+                X=np.array(X).tolist(),
+                cluster_column="cluster",
+                fixed_effects=["X_0", "X_1", "X_2"],
+            ),
             dict(
                 X=np.array(X).tolist(),
                 cluster_column="cluster",
                 fixed_effects=["X_0", "X_1", "X_2"],
                 random_effects=["Z"],
             ),
-            dict(X=np.array(X).tolist(), fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"]),
+            dict(
+                X=np.array(X).tolist(),
+                fixed_effects=["X_0", "X_1", "X_2"],
+                random_effects=["Z"],
+            ),
             dict(X=np.array(X).tolist(), fixed_effects=["X_0", "X_1", "X_2"]),
             dict(X=np.array(X).tolist(), random_effects=["Z"]),
             # Invalid: non-str / non-int arguments / mixed lists

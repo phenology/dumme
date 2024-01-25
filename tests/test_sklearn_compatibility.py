@@ -8,8 +8,9 @@ import numpy as np
 from pycaret.regression import RegressionExperiment
 from sklearn.svm import LinearSVC
 from sklearn.utils.estimator_checks import check_estimator
-from dumme.utils import DummeDataGenerator
+
 from dumme.core import MixedEffectsModel
+from dumme.utils import DummeDataGenerator
 
 
 class TestSklearnCompliance(unittest.TestCase):
@@ -48,7 +49,11 @@ class TestSklearnCompliance(unittest.TestCase):
 
         X_train = train.drop("y", axis=1)
         y_train = train["y"]
-        fit_kwargs = dict(cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"])
+        fit_kwargs = dict(
+            cluster_column="cluster",
+            fixed_effects=["X_0", "X_1", "X_2"],
+            random_effects=["Z"],
+        )
 
         # Ensure it works as standalone
         m = MixedEffectsModel(max_iterations=5)
@@ -57,7 +62,11 @@ class TestSklearnCompliance(unittest.TestCase):
         # Now with pycaret
         exp = RegressionExperiment()
         exp.setup(data=train, target="y")
-        exp.create_model(MixedEffectsModel(max_iterations=5), fit_kwargs=fit_kwargs, cross_validation=False)
+        exp.create_model(
+            MixedEffectsModel(max_iterations=5),
+            fit_kwargs=fit_kwargs,
+            cross_validation=False,
+        )
 
 
 if __name__ == "__main__":

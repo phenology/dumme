@@ -92,7 +92,9 @@ class DummeDataGenerator(object):
             cluster_sizes.extend(size * np.ones(num_clusters_per_size, dtype=np.int8))
         return cluster_sizes
 
-    def generate_split_samples(self, n_training_per_cluster, n_test_known_per_cluster, n_test_new_per_cluster):
+    def generate_split_samples(
+        self, n_training_per_cluster, n_test_known_per_cluster, n_test_new_per_cluster
+    ):
         """
         Generate samples split into training and two test sets.
 
@@ -114,8 +116,12 @@ class DummeDataGenerator(object):
 
         # Create global vector to pass to generate_samples function. Add the two known cluster numbers to get the
         # total to get for known clusters. Then append the new cluster numbers.
-        n_known_per_cluster = np.array(n_training_per_cluster) + np.array(n_test_known_per_cluster)
-        n_samples_per_cluster = np.concatenate((n_known_per_cluster, np.array(n_test_new_per_cluster)))
+        n_known_per_cluster = np.array(n_training_per_cluster) + np.array(
+            n_test_known_per_cluster
+        )
+        n_samples_per_cluster = np.concatenate(
+            (n_known_per_cluster, np.array(n_test_new_per_cluster))
+        )
 
         # Track known and new cluster ids -- will be used later for splitting.
         num_known_clusters = len(n_known_per_cluster)
@@ -130,7 +136,9 @@ class DummeDataGenerator(object):
         # Select out known cluster data, but separate this into training set and test set
         train_dfs = []
         test_dfs = []
-        for cluster_id, num_train, num_test in zip(known_cluster_ids, n_training_per_cluster, n_test_known_per_cluster):
+        for cluster_id, num_train, num_test in zip(
+            known_cluster_ids, n_training_per_cluster, n_test_known_per_cluster
+        ):
             cluster_df = merged_df[merged_df["cluster"] == cluster_id]
             train_cluster_df = cluster_df.iloc[0:num_train]
             test_cluster_df = cluster_df.iloc[num_train : (num_train + num_test)]
@@ -144,7 +152,14 @@ class DummeDataGenerator(object):
         # Store off the unique labels in the training data
         training_cluster_ids = np.sort(training_data["cluster"].unique())
 
-        return (training_data, known_cluster_test_data, new_cluster_test_data, training_cluster_ids, ptev, prev)
+        return (
+            training_data,
+            known_cluster_test_data,
+            new_cluster_test_data,
+            training_cluster_ids,
+            ptev,
+            prev,
+        )
 
     def generate_samples(self, n_samples_per_cluster):
         """
@@ -180,7 +195,9 @@ class DummeDataGenerator(object):
         for i in range(0, n_clusters):
             cluster_id = i
             n_samples = n_samples_per_cluster[i]
-            zi = cluster_id * np.ones(n_samples, dtype=np.int8)  # want cluster id to be int
+            zi = cluster_id * np.ones(
+                n_samples, dtype=np.int8
+            )  # want cluster id to be int
             Z.extend(zi)
 
         # one hot encode it for easier addition to get response
@@ -197,7 +214,9 @@ class DummeDataGenerator(object):
         re = Z_ohe.dot(b)
 
         # ~~~~~~~~~ Noise Generation ~~~~~~~~~~ #
-        eps = np.random.normal(loc=0, scale=self.sigma_e, size=sum(n_samples_per_cluster))
+        eps = np.random.normal(
+            loc=0, scale=self.sigma_e, size=sum(n_samples_per_cluster)
+        )
 
         # ~~~~~~~~~ Response Generation ~~~~~~~~~~ #
         # add fixed effect, random effect, and noise to get final response
@@ -208,11 +227,16 @@ class DummeDataGenerator(object):
         # compute the ptev and prev
         sigma_fixed = self.m * sigma_g
         ptev = 100 * (
-            (sigma_fixed**2 + self.sigma_b**2) / (sigma_fixed**2 + self.sigma_b**2 + self.sigma_e**2)
+            (sigma_fixed**2 + self.sigma_b**2)
+            / (sigma_fixed**2 + self.sigma_b**2 + self.sigma_e**2)
         )
         prev = 100 * (self.sigma_b**2 / (sigma_fixed**2 + self.sigma_b**2))
 
-        logger.info("Drew {} samples from {} clusters.".format(sum(n_samples_per_cluster), n_clusters))
+        logger.info(
+            "Drew {} samples from {} clusters.".format(
+                sum(n_samples_per_cluster), n_clusters
+            )
+        )
         logger.info("PTEV = {}, PREV = {}.".format(ptev, prev))
 
         self.ptev = ptev
