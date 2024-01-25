@@ -9,7 +9,7 @@ from pycaret.regression import RegressionExperiment
 from sklearn.svm import LinearSVC
 from sklearn.utils.estimator_checks import check_estimator
 
-from dumme.core import MixedEffectsModel
+from dumme.dumme import MixedEffectsModel
 from dumme.utils import DummeDataGenerator
 
 

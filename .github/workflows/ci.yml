@@ -4,16 +4,14 @@ on: [push]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.9]
-
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -21,17 +19,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install .[dev]
     - name: Lint with black
-      run: |
-        black --check merf
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        flake8 merf --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 merf --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      run: black --check src tests
+    - name: Lint with ruff
+      run: ruff check src tests
     - name: Unit tests
-      run: |
-        python merf/merf_test.py -v
-    - name: Test SKlearn compliance
-      run: |
-        python merf/sklearn_test.py -v
+      run: pytest

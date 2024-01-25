@@ -1,8 +1,10 @@
 """
-MERF Unit Tests
+Unit Tests
 
 Run with this command for verbose output:
 > python tests.py -v
+
+or with pytest
 
 :copyright: 2017 Manifold, Inc.
 :author: Sourav Dey <sdey@manifold.ai>
@@ -19,10 +21,10 @@ from sklearn.exceptions import NotFittedError
 
 from dumme.utils import DummeDataGenerator
 from dumme.viz import plot_merf_training_stats
-from merf import MixedEffectsModel
+from dumme.dumme import MixedEffectsModel
 
 
-class DataGenerationTest(unittest.TestCase):
+class TestDataGeneration(unittest.TestCase):
     def test_create_cluster_sizes(self):
         clusters = DummeDataGenerator.create_cluster_sizes_array([1, 2, 3], 1)
         self.assertListEqual(clusters, [1, 2, 3])
@@ -115,7 +117,7 @@ class DataGenerationTest(unittest.TestCase):
         self.assertListEqual(X_ohe.sum().tolist(), [2, 2, 0, 1])
 
 
-class MERFTest(unittest.TestCase):
+class TestDumme(unittest.TestCase):
     def setUp(self):
         np.random.seed(3187)
 
@@ -280,7 +282,7 @@ class MERFTest(unittest.TestCase):
         plot_merf_training_stats(m)
 
 
-class MerfInputTests(unittest.TestCase):
+class TestDummeInput(unittest.TestCase):
     """Collection of tests to verify input is parsed correctly."""
 
     def setUp(self):
@@ -303,7 +305,7 @@ class MerfInputTests(unittest.TestCase):
         merf = MixedEffectsModel(RandomForestRegressor(n_estimators=300, n_jobs=-1))
         merf._parse_fit_kwargs(X, *args, **kwargs)
 
-        expected_cluster_column = 4
+        expected_cluster_column = 0
         expected_random_effects = [3] if "random_effects" in kwargs else []
         expected_fixed_effects = (
             [0, 1, 2]

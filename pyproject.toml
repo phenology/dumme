@@ -29,7 +29,7 @@ classifiers=[
 ]
 
 [project.optional-dependencies]
-dev = ["black", "ruff", "isort", "pycaret"]
+dev = ["black", "ruff", "isort", "pytest", "pycaret"]
 
 [project.urls]
 Repository="https://github.com/phenology/merf"
