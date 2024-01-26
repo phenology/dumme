@@ -1,6 +1,7 @@
 """
 Synthetic mixed-effects data generator.
 """
+
 import logging
 
 import numpy as np
