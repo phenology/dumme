@@ -12,9 +12,10 @@ Other difference include:
 - Test suite: using pytest instead of unittest
 
 > [!CAUTION]
-> We currently don't plan on maintaining or developing this further. However, we
-> are happy to contribute our changes to the original version of MERF. Notice
-> https://github.com/manifoldai/merf/issues/68.
+> We are currently not maintaining or developing this further. Ideally we would
+> contribute our changes to the original version of MERF
+> (see https://github.com/manifoldai/merf/issues/68).
+> Do reach out if you want to build upon or collaborate with us on this.
 
 ## Using this version
 
