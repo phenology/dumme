@@ -7,6 +7,7 @@ from typing import Union
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
+from sklearn import clone
 from sklearn.base import BaseEstimator, RegressorMixin, check_array, check_is_fitted
 from sklearn.dummy import DummyRegressor
 from sklearn.utils import check_X_y
@@ -14,9 +15,9 @@ from sklearn.utils import check_X_y
 logger = logging.getLogger(__name__)
 
 
-# BaseEstimator has boilerplate for things like get_params, set_params
 # RegressorMixin adds attribute `_estimator_type = "regressor` and `score` method
-class MixedEffectsModel(BaseEstimator, RegressorMixin):
+# BaseEstimator has boilerplate for things like get_params, set_params, _validate_data
+class MixedEffectsModel(RegressorMixin, BaseEstimator):
     """
     This is the core class to instantiate, train, and predict using a mixed effects random forest model.
     It roughly adheres to the sklearn estimator API.
@@ -44,7 +45,7 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
 
     def __init__(
         self,
-        fe_model=DummyRegressor(),
+        fe_model=None,
         gll_early_stop_threshold=None,
         max_iterations=20,
     ):
@@ -137,7 +138,10 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
         X, clusters, Z = self._split_X_input(X)
 
         self.cluster_counts_ = None
-        self.trained_fe_model_ = None
+        if self.fe_model is None:
+            self.trained_fe_model_ = DummyRegressor()
+        else:
+            self.trained_fe_model_ = clone(self.fe_model)
         self.trained_b_ = None
 
         self.b_hat_history_ = []
@@ -226,7 +230,7 @@ class MixedEffectsModel(BaseEstimator, RegressorMixin):
             assert len(y_star.shape) == 1
 
             # Do the fixed effects regression with all the fixed effects features
-            self.trained_fe_model_ = self.fe_model.fit(X, y_star)
+            self.trained_fe_model_ = self.trained_fe_model_.fit(X, y_star)
             f_hat = self.trained_fe_model_.predict(X)
 
             # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ M-step ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
