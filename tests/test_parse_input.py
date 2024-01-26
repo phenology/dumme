@@ -3,6 +3,7 @@
 Using fixtures in parametrized tests through request.getfixturevalue fixture:
 https://engineeringfordatascience.com/posts/pytest_fixtures_with_parameterize/
 """
+
 import numpy as np
 import pytest
 from sklearn.ensemble import RandomForestRegressor

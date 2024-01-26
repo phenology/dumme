@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 from dumme.utils import DummeDataGenerator
@@ -9,7 +8,7 @@ def test_create_cluster_sizes():
     assert clusters == [1, 2, 3]
 
     clusters = DummeDataGenerator.create_cluster_sizes_array([30, 20, 7], 3)
-    assert clusters ==  [30, 30, 30, 20, 20, 20, 7, 7, 7]
+    assert clusters == [30, 30, 30, 20, 20, 20, 7, 7, 7]
 
 
 def test_generate_samples():
@@ -70,7 +69,12 @@ def test_ohe_clusters():
     )
 
     # check columns and sums
-    assert X_ohe.columns.tolist() == ["cluster_0", "cluster_1", "cluster_2", "cluster_3"]
+    assert X_ohe.columns.tolist() == [
+        "cluster_0",
+        "cluster_1",
+        "cluster_2",
+        "cluster_3",
+    ]
     assert X_ohe.sum().tolist() == [2, 1, 3, 1]
 
     # New encoding -- no categories in matrix
@@ -79,7 +83,12 @@ def test_ohe_clusters():
     )
 
     # check columns and sums
-    assert X_ohe.columns.tolist() == ["cluster_0", "cluster_1", "cluster_2", "cluster_3"]
+    assert X_ohe.columns.tolist() == [
+        "cluster_0",
+        "cluster_1",
+        "cluster_2",
+        "cluster_3",
+    ]
     assert X_ohe.sum().tolist() == [0, 0, 0, 0]
 
     # Mixed encoding -- some categories in matrix
@@ -88,5 +97,10 @@ def test_ohe_clusters():
         training_cluster_ids=training_cluster_ids,
     )
     # check columns and sums
-    assert X_ohe.columns.tolist() == ["cluster_0", "cluster_1", "cluster_2", "cluster_3"]
+    assert X_ohe.columns.tolist() == [
+        "cluster_0",
+        "cluster_1",
+        "cluster_2",
+        "cluster_3",
+    ]
     assert X_ohe.sum().tolist() == [2, 2, 0, 1]

@@ -1,6 +1,7 @@
 """
 Mixed Effects Model.
 """
+
 import logging
 from typing import Union
 
@@ -128,7 +129,9 @@ class MixedEffectsModel(RegressorMixin, BaseEstimator):
             MERF: fitted model
         """
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Parse Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        check_X_y(X, y, ensure_min_features=2)  # First check, then parse columns, then overwrite X and y
+        check_X_y(
+            X, y, ensure_min_features=2
+        )  # First check, then parse columns, then overwrite X and y
         self._parse_fit_kwargs(X, cluster_column, fixed_effects, random_effects)
         X, y = check_X_y(X, y, y_numeric=True)
 
