@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dumme"
-version = "1.0.1"
+name = "DumME"
+version = "0.1.0"
 dependencies = [
   "pandas>=1.0",
   "numpy>=1.20",
@@ -12,12 +12,12 @@ dependencies = [
   "matplotlib>=3.0",
   "lightgbm",
 ]
-description="Mixed Effects Model"
+description="Mixed Effects Dummy Model"
 readme="README.md"
 requires-python = '>=3.9'
 authors = [
-  {name = "Manifold, Inc.", email = "sdey@manifold.ai"},
   {name = "Peter Kalverla.", email = "p.kalverla@esciencecenter.nl"},
+  {name = "Stefan Verhoeven.", email = "s.verhoeven@esciencecenter.nl"},
 ]
 license = {file = "LICENSE.txt"}
 keywords=["random forest", "machine learning", "mixed effects"]
@@ -32,7 +32,7 @@ classifiers=[
 dev = ["black", "ruff", "isort", "pytest", "pycaret"]
 
 [project.urls]
-Repository="https://github.com/phenology/merf"
+Repository="https://github.com/phenology/dumme"
 Original="https://github.com/manifoldai/merf"
 
 [tool.isort]
