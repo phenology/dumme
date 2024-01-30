@@ -1,4 +1,5 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10588922.svg)](https://doi.org/10.5281/zenodo.10588922)
+[![PyPI version](https://badge.fury.io/py/DumME.svg)](https://badge.fury.io/py/DumME)
 
 # DumME: Mixed Effects Dummy Model
 
@@ -21,9 +22,11 @@ Other difference include:
 
 ## Using this version
 
-Install via github:
+Install the release version from PyPi or the latest version from GitHub:
 
 ```bash
+pip install DumME
+# or
 pip install git+https://github.com/phenology/merf
 ```
 
