@@ -31,8 +31,8 @@ abstract: >-
   - Test suite: using pytest instead of unittest
 license: MIT
 commit: 456dfe7
-version: '0.1'
-date-released: '2024-01-26'
+version: '0.1.0'
+date-released: '2024-01-30'
 references:
   - authors:
       - family-names: Dey
