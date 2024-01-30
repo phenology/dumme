@@ -1,19 +1,15 @@
 # DumME: Mixed Effects Dummy Model
 
-This is an adaptation of https://github.com/manifoldai/merf. The most important changes are:
+This is an adaptation of MERF (https://github.com/manifoldai/merf). The main
+difference is that this version is fully compliant with the scikit-learn API.
 
-* This version is (mostly) [SKlearn
-  compliant](https://scikit-learn.org/stable/developers/develop.html) and can
-  therefore be used with other frameworks such as
-  [pycaret](https://pycaret.gitbook.io/docs/).
-  * Fit API starts with X and y; Z and clusters are removed. Instead, optional
-    kwargs to specify the columns of 'clusters', 'fixed_effects', and
-    'random_effects'.
-  * Predict only accepts X as input. It is assumed new data is structured in the
-    same way as the original training data.
-* The main class was renamed to MixedEffectsModel (more general) with the
-  scikit-learn dummy model as default.
-* Package trimmed down to bare minimum but with modern package structure
+Other difference include:
+
+- The name: MERF was renamed to the more general MixedEffectsModel
+- The default fixed-effects model: dummy model instead of random forest
+- The package structure: stripped down to its core and then upgraded to use
+  modern standards
+- Test suite: using pytest instead of unittest
 
 > [!CAUTION]
 > We are currently not maintaining or developing this further. Ideally we would
@@ -42,11 +38,17 @@ y = df.pop("y")
 x = df
 
 # Fit a dummy model
+# Notice the signature of the `fit` method: first X and y, and the other args are optional.
 me_dummy = MixedEffectsModel()
-me_dummy.fit(X, y)  # This works now
+me_dummy.fit(X, y)
 
-# But you can still pass in additional arguments
+# or
 me_dummy.fit(X, y, cluster_column="cluster", fixed_effects=["X_0", "X_1", "X_2"], random_effects=["Z"])
+
+# Predict only accepts X as input. It is assumed new data is structured
+# in the same way as the original training data.
+new_X = X.copy()
+me_dummy.predict(new_X)
 ```
 
 To get the "original" MERF (but still with the new fit signature):

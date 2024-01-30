@@ -1,0 +1,47 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: DumME
+message: >-
+  This is an adaptation of existing software. Please also refer to the original.
+type: software
+authors:
+  - given-names: Peter
+    family-names: Kalverla
+    email: p.kalverla@esciencecenter.nl
+    affiliation: Netherland eScience Center
+    orcid: 'https://orcid.org/0000-0002-5025-7862'
+  - given-names: Stefan
+    family-names: Verhoeven
+    email: s.verhoeven@esciencecenter.nl
+    affiliation: Netherlands eScience Center
+    orcid: 'https://orcid.org/0000-0002-5821-2060'
+repository-code: 'https://github.com/phenology/dumme'
+abstract: >-
+  This is an adaptation of MERF (https://github.com/manifoldai/merf). The main
+  difference is that this version is fully compliant with the scikit-learn API.
+
+  Other difference include:
+
+  - The name: MERF was renamed to the more general MixedEffectsModel
+  - The default fixed-effects model: dummy model instead of random forest
+  - The package structure: stripped down to its core and then upgraded to use
+    modern standards
+  - Test suite: using pytest instead of unittest
+license: MIT
+commit: 456dfe7
+version: '0.1.0'
+date-released: '2024-01-30'
+references:
+  - authors:
+      - family-names: Dey
+        given-names: Sourav
+      - family-names: Grover
+        given-names: Prince
+      - family-names: Rose
+        given-names: Stephen Anthony
+    title: "Mixed Effects Random Forest"
+    type: software
+    version: 1.0
+    repository-code: https://github.com/manifoldai/merf
