@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10588922.svg)](https://doi.org/10.5281/zenodo.10588922)
+
 # DumME: Mixed Effects Dummy Model
 
 This is an adaptation of MERF (https://github.com/manifoldai/merf). The main
