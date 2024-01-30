@@ -30,9 +30,10 @@ abstract: >-
     modern standards
   - Test suite: using pytest instead of unittest
 license: MIT
-commit: 456dfe7
-version: '0.1.0'
-date-released: '2024-01-30'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.10588922
+    description: Latest version of software
 references:
   - authors:
       - family-names: Dey
